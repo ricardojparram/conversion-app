@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Typography } from "@/components/Typography";
 import { Div } from "@/components/Div";
 import { Currency, TextCurrency } from "@/components/Currency";
@@ -6,9 +6,48 @@ import { useFetchConvertions } from "@/hooks/useFetchConvertions";
 
 export default function Index() {
   const [bs, setBs] = useState(0);
-  const [usd, setUSD] = useState(0);
+  const [usd, setUSD] = useState(1);
   const [convertions, isFetching] = useFetchConvertions();
   console.log(convertions);
+  const [calculatedBs, setCalculatedBs] = useState({
+    bcv: 0,
+    paralelo: 0,
+    promedio: 0,
+  });
+
+  const [calculatedUSD, setCalculatedUSD] = useState({
+    bcv: 0,
+    paralelo: 0,
+    promedio: 0,
+  });
+  useEffect(() => {
+    setCalculatedBs({
+      bcv: bs,
+      paralelo: bs,
+      promedio: bs,
+    });
+    setCalculatedUSD({
+      bcv: bs / convertions.bcv,
+      paralelo: bs / convertions.paralelo,
+      promedio: (convertions.bcv + convertions.paralelo) / 2,
+    });
+    setUSD(0);
+  }, [bs]);
+
+  useEffect(() => {
+    setCalculatedUSD({
+      bcv: usd,
+      paralelo: usd,
+      promedio: usd,
+    });
+    setCalculatedBs({
+      bcv: usd * convertions.bcv,
+      paralelo: usd * convertions.paralelo,
+      promedio: (usd * convertions.bcv + usd * convertions.paralelo) / 2,
+    });
+
+    setBs(0);
+  }, [usd]);
   return (
     <Div
       style={{
@@ -55,13 +94,22 @@ export default function Index() {
           }}
         >
           <Div>
-            <Typography type="subtitle">Paralelo</Typography>
-            <TextCurrency value={convertions.paralelo} />
+            <Typography type="subtitle">Paralelo </Typography>
+            <Typography>{convertions.dateParalelo}</Typography>
+            <TextCurrency suffix="$  " value={calculatedUSD.paralelo} />
+            <TextCurrency value={calculatedBs.paralelo} />
+          </Div>
+          <Div>
+            <Typography type="subtitle">BCV</Typography>
+            <Typography>{convertions.dateBcv}</Typography>
+            <TextCurrency suffix="$  " value={calculatedUSD.bcv} />
+            <TextCurrency value={calculatedBs.bcv} />
           </Div>
 
           <Div>
-            <Typography type="subtitle">BCV</Typography>
-            <TextCurrency value={convertions.bcv} />
+            <Typography type="subtitle">Promedio</Typography>
+            <TextCurrency suffix="$  " value={calculatedUSD.promedio} />
+            <TextCurrency value={calculatedBs.promedio} />
           </Div>
         </Div>
       )}
