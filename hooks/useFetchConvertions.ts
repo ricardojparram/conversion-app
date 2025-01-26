@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatDate } from "@/utils/formatDate";
 
 const API_URL = "https://api.alcambio.app/graphql";
 export function useFetchConvertions() {
@@ -56,7 +57,11 @@ export function useFetchConvertions() {
         },
         { paralelo: 0, bcv: 0 },
       );
-      setData({ ...currencies, dateBcv, dateParalelo });
+      setData({
+        ...currencies,
+        dateBcv: formatDate(dateBcv),
+        dateParalelo: formatDate(dateParalelo),
+      });
     };
     fetchData();
   }, []);
