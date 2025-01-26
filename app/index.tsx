@@ -26,10 +26,12 @@ export default function Index() {
       paralelo: bs,
       promedio: bs,
     });
+    const bcv_ = bs / convertions.bcv;
+    const paralelo_ = bs / convertions.paralelo;
     setCalculatedUSD({
-      bcv: bs / convertions.bcv,
-      paralelo: bs / convertions.paralelo,
-      promedio: (convertions.bcv + convertions.paralelo) / 2,
+      bcv: bcv_,
+      paralelo: paralelo_,
+      promedio: (bcv_ + paralelo_) / 2,
     });
     setUSD(0);
   }, [bs]);
@@ -40,10 +42,13 @@ export default function Index() {
       paralelo: usd,
       promedio: usd,
     });
+
+    const bcv_ = usd * convertions.bcv;
+    const paralelo_ = usd * convertions.paralelo;
     setCalculatedBs({
-      bcv: usd * convertions.bcv,
-      paralelo: usd * convertions.paralelo,
-      promedio: (usd * convertions.bcv + usd * convertions.paralelo) / 2,
+      bcv: bcv_,
+      paralelo: paralelo_,
+      promedio: (bcv_ + paralelo_) / 2,
     });
 
     setBs(0);
