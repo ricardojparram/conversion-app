@@ -5,7 +5,7 @@ import { Currency, TextCurrency } from "@/components/Currency";
 import { ConversionDisplay } from "@/components/Convertions";
 import { calculateConversions } from "@/utils/calculateConvertions";
 import { convertionStore } from "@/store/convertions";
-import { Btn } from "@/components/Button";
+import { Btn } from "@/components/Btn";
 import { CalculatedConvertions } from "@/types/convertions";
 
 export default function Index() {
