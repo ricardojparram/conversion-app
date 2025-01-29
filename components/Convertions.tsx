@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { Typography } from "@/components/Typography";
 import { Div } from "@/components/Div";
 import { TextCurrency } from "@/components/Currency";
-import { useThemeColor } from "@/hooks/useThemeColor";
+import { setStringAsync } from "expo-clipboard";
 import { Btn } from "@/components/Btn";
 
 export const ConversionDisplay = ({
@@ -15,8 +16,18 @@ export const ConversionDisplay = ({
   calculatedUSD: number;
   calculatedBs: number;
 }) => {
-  const textColor = useThemeColor({}, "text");
-  const tintColor = useThemeColor({}, "tint");
+  const [usdCopied, setUSDCopied] = useState<boolean>(false);
+  const [bsCopied, setBSCopied] = useState<boolean>(false);
+  const copyUSD = async () => {
+    await setStringAsync(calculatedUSD.toFixed(2).toString());
+    setUSDCopied(true);
+    setTimeout(() => setUSDCopied(false), 1000);
+  };
+  const copyBs = async () => {
+    await setStringAsync(calculatedBs.toFixed(2).toString());
+    setBSCopied(true);
+    setTimeout(() => setBSCopied(false), 1000);
+  };
   return (
     <Div
       style={{
@@ -37,23 +48,30 @@ export const ConversionDisplay = ({
       </Div>
 
       <Div>
-        <Typography>
+        <Typography type="subtitle">
           <TextCurrency suffix="$ " value={calculatedUSD} /> ={"  "}
           <TextCurrency value={calculatedBs} />
         </Typography>
       </Div>
 
       <Div style={{ flexDirection: "row", gap: 20 }}>
+        {/* clipboard-check-multiple */}
         <Btn
-          icon="clipboard-multiple-outline"
-          onPress={() => console.log("copiar")}
+          icon={
+            usdCopied
+              ? "clipboard-check-multiple"
+              : "clipboard-multiple-outline"
+          }
+          onPress={copyUSD}
         >
           USD
         </Btn>
 
         <Btn
-          icon="clipboard-multiple-outline"
-          onPress={() => console.log("copiar")}
+          icon={
+            bsCopied ? "clipboard-check-multiple" : "clipboard-multiple-outline"
+          }
+          onPress={copyBs}
         >
           BS
         </Btn>
