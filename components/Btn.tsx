@@ -39,3 +39,27 @@ export const Btn: React.FC<BtnProps> = ({ children, onPress, icon }) => {
     </Div>
   );
 };
+
+interface IconBtnProps extends TouchableOpacityProps {
+  onPress: () => void;
+  icon: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
+  size?: number;
+}
+
+export const IconBtn: React.FC<IconBtnProps> = ({ icon, size, onPress }) => {
+  const iconColor = useThemeColor({}, "icon");
+  const sized: number = size || 18;
+
+  return (
+    <Div style={{ alignItems: "baseline" }}>
+      <TouchableOpacity
+        onPress={onPress}
+        style={{
+          padding: 8,
+        }}
+      >
+        <MaterialCommunityIcons name={icon} size={sized} color={iconColor} />
+      </TouchableOpacity>
+    </Div>
+  );
+};
