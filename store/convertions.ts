@@ -1,16 +1,15 @@
 import { create } from "zustand";
 import { persist, createJSONStorage, devtools } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { API_URL } from "@/.env";
 import { formatDate } from "@/utils/formatDate";
 import { ApiResponse } from "@/types/apiTypes";
 import { Convertions, ConversionStore } from "@/types/convertions";
 
+const API_URL = process.env.API_URL;
 export const convertionStore = create<ConversionStore>()(
   devtools(
     persist(
       (set, get) => ({
-        API_URL: API_URL,
         convertions: {} as Convertions,
         isFetching: false,
 
@@ -52,7 +51,6 @@ export const convertionStore = create<ConversionStore>()(
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              Host: "api.alcambio.app",
             },
             body,
           })

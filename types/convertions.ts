@@ -16,7 +16,6 @@ export interface CalculatedConvertions {
 }
 
 export interface ConversionStore {
-  API_URL: string;
   convertions: Convertions;
   isFetching: boolean;
 
