@@ -3,8 +3,15 @@ import { Typography } from "./Typography";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Div } from "./Div";
+import { TouchableOpacityProps } from "react-native";
 
-export const Btn = ({ children, onPress, icon }) => {
+interface BtnProps extends TouchableOpacityProps {
+  children: React.ReactNode;
+  onPress: () => void;
+  icon?: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
+}
+
+export const Btn: React.FC<BtnProps> = ({ children, onPress, icon }) => {
   const iconColor = useThemeColor({}, "icon");
   const textColor = useThemeColor({}, "text");
 
