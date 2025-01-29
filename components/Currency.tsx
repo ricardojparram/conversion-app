@@ -67,10 +67,10 @@ export function TextCurrency({
 }: CurrencyInputProps) {
   const val = isNaN(value) ? 0 : value;
   const formattedValue = formatNumber(val, {
-    suffix: "  " + suffix,
+    suffix: " " + suffix,
     delimiter,
     separator,
     precision,
   });
-  return <Typography type="defaultSemiBold">{formattedValue}</Typography>;
+  return <Typography type="subtitle">{formattedValue}</Typography>;
 }
