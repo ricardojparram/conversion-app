@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { Typography } from "@/components/Typography";
 import { Div } from "@/components/Div";
+import { ScrollDiv } from "@/components/ScrollDiv";
 import { Currency, TextCurrency } from "@/components/Currency";
 import { ConversionDisplay } from "@/components/Convertions";
 import { calculateConversions } from "@/utils/calculateConvertions";
 import { convertionStore } from "@/store/convertions";
-import { Btn } from "@/components/Btn";
 import { CalculatedConvertions } from "@/types/convertions";
+import { IconBtn } from "@/components/Btn";
+import { ActivityIndicator } from "react-native";
 
 export default function Index() {
   const [bs, setBs] = useState(0);
@@ -42,69 +44,92 @@ export default function Index() {
   }, [usd, bs, convertions]);
 
   return (
-    <Div
-      style={{
-        flex: 1,
-        alignItems: "center",
-        paddingTop: 50,
-        padding: 20,
-      }}
-    >
-      <Typography type="title">Cambio rápido</Typography>
-      <Btn onPress={() => fetch()}>Refrescar</Btn>
-      <Div
-        style={{
-          flex: 1,
-          gap: 10,
-          width: "100%",
-          paddingVertical: 10,
-          paddingHorizontal: 40,
-        }}
-      >
-        <Currency
-          value={bs}
-          onChangeValue={setBs}
-          onPress={() => setUSD(0)}
-          label="Bolívares."
-        />
+    <>
+      <ScrollDiv>
+        <Div
+          style={{
+            flex: 1,
+            position: "relative",
+            alignItems: "center",
+            paddingTop: 30,
+            padding: 10,
+          }}
+        >
+          <Typography type="title">Cambio rápido</Typography>
 
-        <Currency
-          suffix="$  "
-          value={usd}
-          onChangeValue={setUSD}
-          onPress={() => setBs(0)}
-          label="Dólares."
-        />
-      </Div>
-      {isFetching && <Typography type="subtitle">Cargando...</Typography>}
-      <Div
-        style={{
-          flex: 2,
-          gap: 10,
-          width: "100%",
-          paddingVertical: 10,
-          paddingHorizontal: 40,
-        }}
-      >
-        <ConversionDisplay
-          label="Paralelo"
-          date={convertions.dateParalelo}
-          calculatedUSD={calculatedConvertions.calculatedUSD.paralelo}
-          calculatedBs={calculatedConvertions.calculatedBs.paralelo}
-        />
+          <Div style={{ position: "absolute", right: 10, top: 10 }}>
+            <IconBtn onPress={fetch} icon="refresh" size={30} />
+          </Div>
+          <Div
+            style={{
+              gap: 10,
+              width: "100%",
+              paddingVertical: 10,
+              paddingHorizontal: 40,
+            }}
+          >
+            <Currency
+              value={bs}
+              onChangeValue={setBs}
+              onPress={() => setUSD(0)}
+              label="Bolívares."
+            />
 
-        <ConversionDisplay
-          label="BCV"
-          date={convertions.dateBcv}
-          calculatedUSD={calculatedConvertions.calculatedUSD.bcv}
-          calculatedBs={calculatedConvertions.calculatedBs.bcv}
-        />
-        <ConversionDisplay
-          label="Promedio"
-          calculatedUSD={calculatedConvertions.calculatedUSD.promedio}
-          calculatedBs={calculatedConvertions.calculatedBs.promedio}
-        />
-      </Div>
-    </Div>
+            <Currency
+              suffix="$  "
+              value={usd}
+              onChangeValue={setUSD}
+              onPress={() => setBs(0)}
+              label="Dólares."
+            />
+          </Div>
+
+          <Div
+            style={{
+              gap: 10,
+              width: "100%",
+              paddingVertical: 10,
+              paddingHorizontal: 40,
+            }}
+          >
+            <ConversionDisplay
+              label="Paralelo"
+              date={convertions.dateParalelo}
+              calculatedUSD={calculatedConvertions.calculatedUSD.paralelo}
+              calculatedBs={calculatedConvertions.calculatedBs.paralelo}
+            />
+
+            <ConversionDisplay
+              label="BCV"
+              date={convertions.dateBcv}
+              calculatedUSD={calculatedConvertions.calculatedUSD.bcv}
+              calculatedBs={calculatedConvertions.calculatedBs.bcv}
+            />
+            <ConversionDisplay
+              label="Promedio"
+              calculatedUSD={calculatedConvertions.calculatedUSD.promedio}
+              calculatedBs={calculatedConvertions.calculatedBs.promedio}
+            />
+          </Div>
+        </Div>
+      </ScrollDiv>
+
+      {isFetching && (
+        <Div
+          style={{
+            alignItems: "center",
+            justifyContent: "center",
+            position: "absolute",
+            top: 0,
+            left: 0,
+            bottom: 0,
+            right: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+          }}
+        >
+          <ActivityIndicator size="large" color="white" />
+        </Div>
+      )}
+    </>
   );
 }
