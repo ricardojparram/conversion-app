@@ -4,8 +4,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { formatDate } from "@/utils/formatDate";
 import { ApiResponse } from "@/types/apiTypes";
 import { Convertions, ConversionStore } from "@/types/convertions";
+import { API_URL } from "@/constants/globals";
 
-const API_URL = process.env.API_URL;
 export const convertionStore = create<ConversionStore>()(
   devtools(
     persist(
