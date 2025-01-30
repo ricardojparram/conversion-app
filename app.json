@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Cambio Rápido",
-    "slug": "cambio-rapido",
+    "slug": "conversion-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/favicon.png",
