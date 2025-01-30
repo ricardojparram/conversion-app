@@ -19,10 +19,7 @@ export function ScrollDiv({
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView
-        style={{ flex: 1, paddingTop: StatusBar.currentHeight }}
-        edges={["top"]}
-      >
+      <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
         <ScrollView style={[{ backgroundColor }, style]} {...otherProps} />
       </SafeAreaView>
     </SafeAreaProvider>
