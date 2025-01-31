@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Cambio Rápido",
+    "name": "conversion-app",
     "slug": "conversion-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -24,14 +24,23 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableProguardInReleaseBuilds": true,
+            "extraProguardRules": "-keep class com.google.android.gms.internal.consent_sdk.** { *; }" // Añade aquí tus reglas personalizadas
+          }
+        }
+      ],
+      ["expo-router"],
       [
         "expo-splash-screen",
         {
           "image": "./assets/images/favicon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "transparent"
         }
       ]
     ],
