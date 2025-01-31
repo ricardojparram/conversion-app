@@ -19,6 +19,7 @@ export function Currency({
   label,
   onChangeText,
   onPress,
+  ...props
 }: CurrencyInputType) {
   const textColor = useThemeColor({}, "text");
   // const bgColor = useThemeColor({}, "backgroundSecondary");
@@ -53,6 +54,7 @@ export function Currency({
           height: 50,
         }}
         onPress={onPress}
+        {...props}
       />
     </Div>
   );
