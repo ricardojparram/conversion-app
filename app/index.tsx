@@ -8,11 +8,12 @@ import { calculateConversions } from "@/utils/calculateConvertions";
 import { convertionStore } from "@/store/convertions";
 import { CalculatedConvertions } from "@/types/convertions";
 import { IconBtn } from "@/components/Btn";
-import { ActivityIndicator } from "react-native";
+import { ActivityIndicator, Dimensions } from "react-native";
 
+const { height: ScreenHeight, width: ScreenWidth } = Dimensions.get("window");
 export default function Index() {
-  const [bs, setBs] = useState(0);
-  const [usd, setUSD] = useState(1);
+  const [bs, setBs] = useState<number | null>(0);
+  const [usd, setUSD] = useState<number | null>(0);
   const [isFetching, setIsFetching] = useState(false);
   const convertions = convertionStore((state) => state.convertions);
   const fetchConvertions = convertionStore((state) => state.fetchConvertions);
@@ -47,69 +48,94 @@ export default function Index() {
     <>
       <ScrollDiv>
         <Div
-          style={{
-            flex: 1,
-            position: "relative",
-            alignItems: "center",
-            paddingTop: 30,
-            padding: 10,
-          }}
+          style={[
+            {
+              width: "100%",
+              height: ScreenHeight,
+            },
+            ScreenWidth > 500 && {
+              justifyContent: "center",
+              alignItems: "center",
+            },
+          ]}
         >
-          <Typography type="title">Cambio rápido</Typography>
-
-          <Div style={{ position: "absolute", right: 10, top: 10 }}>
-            <IconBtn onPress={fetch} icon="refresh" size={30} />
-          </Div>
           <Div
             style={{
-              gap: 10,
-              width: "100%",
-              paddingVertical: 10,
-              paddingHorizontal: 40,
+              alignItems: "center",
+              paddingTop: 30,
+              maxWidth: 400,
             }}
           >
-            <Currency
-              value={bs}
-              onChangeValue={setBs}
-              onPress={() => setUSD(0)}
-              label="Bolívares."
-            />
+            <Div
+              style={{
+                gap: 10,
+                width: "100%",
+                paddingVertical: 10,
+                paddingHorizontal: 40,
+              }}
+            >
+              <Div
+                style={{
+                  width: "100%",
+                  justifyContent: "space-between",
+                  flexDirection: "row",
+                }}
+              >
+                <Typography
+                  type="title"
+                  style={{ textAlignVertical: "center" }}
+                >
+                  Cambio rápido
+                </Typography>
 
-            <Currency
-              suffix="$  "
-              value={usd}
-              onChangeValue={setUSD}
-              onPress={() => setBs(0)}
-              label="Dólares."
-            />
-          </Div>
+                <IconBtn onPress={fetch} icon="refresh" size={30} />
+              </Div>
+              <Currency
+                value={bs}
+                onChangeValue={setBs}
+                onPress={() => setUSD(0)}
+                onClick={() => setUSD(0)}
+                label="Bolívares."
+              />
 
-          <Div
-            style={{
-              gap: 10,
-              width: "100%",
-              paddingVertical: 10,
-              paddingHorizontal: 40,
-            }}
-          >
-            <ConversionDisplay
-              label="Paralelo"
-              date={convertions.dateParalelo}
-              calculatedUSD={calculatedConvertions.calculatedUSD.paralelo}
-              calculatedBs={calculatedConvertions.calculatedBs.paralelo}
-            />
+              <Currency
+                suffix="$  "
+                value={usd}
+                onChangeValue={setUSD}
+                onPress={() => setBs(0)}
+                onClick={() => setBs(0)}
+                label="Dólares."
+              />
+            </Div>
 
-            <ConversionDisplay
-              label="BCV"
-              date={convertions.dateBcv}
-              calculatedUSD={calculatedConvertions.calculatedUSD.bcv}
-              calculatedBs={calculatedConvertions.calculatedBs.bcv}
-            />
-            <ConversionDisplay
-              label="Promedio"
-              calculatedUSD={calculatedConvertions.calculatedUSD.promedio}
-              calculatedBs={calculatedConvertions.calculatedBs.promedio}
-            />
+            <Div
+              style={{
+                gap: 10,
+                width: "100%",
+                paddingVertical: 10,
+                paddingHorizontal: 40,
+                justifyContent: "center",
+              }}
+            >
+              <ConversionDisplay
+                label="Paralelo"
+                date={convertions.dateParalelo}
+                calculatedUSD={calculatedConvertions.calculatedUSD.paralelo}
+                calculatedBs={calculatedConvertions.calculatedBs.paralelo}
+              />
+
+              <ConversionDisplay
+                label="BCV"
+                date={convertions.dateBcv}
+                calculatedUSD={calculatedConvertions.calculatedUSD.bcv}
+                calculatedBs={calculatedConvertions.calculatedBs.bcv}
+              />
+              <ConversionDisplay
+                label="Promedio"
+                calculatedUSD={calculatedConvertions.calculatedUSD.promedio}
+                calculatedBs={calculatedConvertions.calculatedBs.promedio}
+              />
+            </Div>
           </Div>
         </Div>
       </ScrollDiv>
