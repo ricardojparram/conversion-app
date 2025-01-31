@@ -11,7 +11,7 @@ interface BtnProps extends TouchableOpacityProps {
   icon?: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
 }
 
-export const Btn: React.FC<BtnProps> = ({ children, onPress, icon }) => {
+export const Btn: React.FC<BtnProps> = ({ children, onPress, icon, style }) => {
   const iconColor = useThemeColor({}, "icon");
   const textColor = useThemeColor({}, "text");
 
@@ -19,16 +19,19 @@ export const Btn: React.FC<BtnProps> = ({ children, onPress, icon }) => {
     <Div style={{ alignItems: "baseline" }}>
       <TouchableOpacity
         onPress={onPress}
-        style={{
-          borderStyle: "solid",
-          borderWidth: 1,
-          borderColor: icon ? iconColor : textColor,
-          borderRadius: 5,
-          padding: 2,
-          paddingHorizontal: 8,
-        }}
+        style={[
+          {
+            borderStyle: "solid",
+            borderWidth: 1,
+            borderColor: icon ? iconColor : textColor,
+            borderRadius: 5,
+            padding: 5,
+            paddingHorizontal: 10,
+          },
+          style,
+        ]}
       >
-        <Typography>
+        <Typography type="subtitle">
           <Typography>{children}</Typography>
           {icon && " "}
           {icon && (
