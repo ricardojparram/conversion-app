@@ -57,7 +57,7 @@ export default function Index() {
           },
           // @ts-ignore
           Platform.OS === "web" && {
-            height: "100vh",
+            height: "100dvh",
             justifyContent: "center",
             alignItems: "center",
           },
