@@ -7,11 +7,10 @@ import { ConversionDisplay } from "@/components/Convertions";
 import { calculateConversions } from "@/utils/calculateConvertions";
 import { convertionStore } from "@/store/convertions";
 import { CalculatedConvertions } from "@/types/convertions";
-import { IconBtn, Btn } from "@/components/Btn";
-import { ActivityIndicator, Dimensions } from "react-native";
+import { IconBtn } from "@/components/Btn";
+import { ActivityIndicator, Platform } from "react-native";
 import { useThemeColor } from "@/hooks/useThemeColor";
 
-const { height: ScreenHeight, width: ScreenWidth } = Dimensions.get("window");
 export default function Index() {
   const iconColor = useThemeColor({}, "icon");
   const [bs, setBs] = useState<number | null>(0);
@@ -44,6 +43,7 @@ export default function Index() {
     fetch();
   }, []);
   useEffect(() => {
+    // @ts-ignore
     const data = calculateConversions(bs, usd, convertions);
     setCalculated(data);
   }, [usd, bs, convertions]);
@@ -54,9 +54,10 @@ export default function Index() {
         style={[
           {
             width: "100%",
-            height: ScreenHeight,
           },
-          ScreenWidth > 500 && {
+          // @ts-ignore
+          Platform.OS === "web" && {
+            height: "100vh",
             justifyContent: "center",
             alignItems: "center",
           },
@@ -115,8 +116,7 @@ export default function Index() {
             <Currency
               value={bs}
               onChangeValue={setBs}
-              onPress={() => setUSD(0)}
-              onClick={() => setUSD(0)}
+              onFocus={() => setUSD(0)}
               label="Bolívares."
             />
 
@@ -124,8 +124,7 @@ export default function Index() {
               suffix="$  "
               value={usd}
               onChangeValue={setUSD}
-              onPress={() => setBs(0)}
-              onClick={() => setBs(0)}
+              onFocus={() => setBs(0)}
               label="Dólares."
             />
           </Div>
