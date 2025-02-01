@@ -89,7 +89,7 @@ export const convertionStore = create<ConversionStore>()(
         },
       }),
       {
-        name: "authStore",
+        name: "convertions",
         storage: createJSONStorage(() => AsyncStorage),
       },
     ),
