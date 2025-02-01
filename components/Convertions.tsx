@@ -63,6 +63,7 @@ export const ConversionDisplay = ({
               : "clipboard-multiple-outline"
           }
           onPress={copyUSD}
+          className="notranslate"
         >
           USD
         </Btn>
@@ -72,6 +73,7 @@ export const ConversionDisplay = ({
             bsCopied ? "clipboard-check-multiple" : "clipboard-multiple-outline"
           }
           onPress={copyBs}
+          className="notranslate"
         >
           BS
         </Btn>
