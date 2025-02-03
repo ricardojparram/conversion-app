@@ -6,7 +6,7 @@
 const tintColorLight = "#d67d00";
 const tintColorDark = "#eb8a02";
 
-export const Colors = {
+module.exports.Colors = {
   light: {
     text: "#11181C",
     background: "#fff",
