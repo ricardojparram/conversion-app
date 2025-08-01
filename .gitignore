@@ -39,3 +39,8 @@ app-example
 .env
 .env.js
 .vercel
+
+# locks
+yarn.lock
+package-lock.json
+pnpm-lock.yaml
