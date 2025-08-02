@@ -21,13 +21,12 @@ export function Currency({
   onPress,
   ...props
 }: CurrencyInputType) {
-  const textColor = useThemeColor({}, "text");
-  // const bgColor = useThemeColor({}, "backgroundSecondary");
+  const [textColor, bgColor] = useThemeColor("text", "backgroundSecondary");
 
   return (
     <Div>
       {label && (
-        <Typography style={{ paddingLeft: 5 }} type="defaultSemiBold">
+        <Typography style={{ paddingLeft: 5 }} type="md">
           {label}
         </Typography>
       )}
@@ -43,12 +42,13 @@ export function Currency({
         maxValue={9999999999999}
         onChangeText={onChangeText}
         style={{
+          backgroundColor: bgColor,
           color: textColor,
           fontSize: 20,
           textAlign: "right",
           borderStyle: "solid",
-          borderWidth: 2,
-          borderColor: textColor,
+          borderWidth: 1,
+          borderColor: "rgba(0, 0, 0, 0.2)",
           borderRadius: 10,
           paddingRight: 10,
           height: 50,

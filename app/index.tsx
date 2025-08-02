@@ -7,13 +7,14 @@ import { ConversionDisplay } from "@/components/Convertions";
 import { calculateConversions } from "@/utils/calculateConvertions";
 import { convertionStore } from "@/store/convertions";
 import { CalculatedConvertions } from "@/types/convertions";
-import { IconBtn } from "@/components/Btn";
 import { ActivityIndicator, Platform } from "react-native";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { TrendingUp } from "@/components/icons/TendringUp";
+import { ArrowRight } from "@/components/icons/ArrowRight";
+import { Dimensions } from "react-native";
 
 export default function Index() {
-  const iconColor = useThemeColor({}, "icon");
+  const [iconColor, bgColor] = useThemeColor("icon", "background");
   const [bs, setBs] = useState<number | null>(0);
   const [usd, setUSD] = useState<number | null>(0);
   const [isFetching, setIsFetching] = useState(false);
@@ -50,7 +51,7 @@ export default function Index() {
   }, [usd, bs, convertions]);
 
   return (
-    <ScrollDiv>
+    <ScrollDiv style={{ backgroundColor: bgColor }}>
       <Div
         style={[
           {
@@ -120,10 +121,18 @@ export default function Index() {
                     textAlignVertical: "center",
                     display: "flex",
                     alignItems: "center",
+                    justifyContent: "center",
                     color: "rgba(0, 0, 0, 0.5)",
                   }}
                 >
-                  Bolívares a Dólares
+                  Bolívares{" "}
+                  <ArrowRight
+                    width={16}
+                    height={16}
+                    color="rgba(0, 0, 0, 0.5)"
+                    style={{ transform: [{ translateY: 3 }] }}
+                  />{" "}
+                  Dólares
                 </Typography>
               </Div>
             </Div>
@@ -131,7 +140,7 @@ export default function Index() {
               value={bs}
               onChangeValue={setBs}
               onFocus={() => setUSD(0)}
-              label="Bolívares."
+              label="Bolívares"
             />
 
             <Currency
@@ -139,7 +148,7 @@ export default function Index() {
               value={usd}
               onChangeValue={setUSD}
               onFocus={() => setBs(0)}
-              label="Dólares."
+              label="Dólares"
             />
           </Div>
 

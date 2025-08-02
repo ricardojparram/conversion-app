@@ -12,8 +12,7 @@ interface BtnProps extends TouchableOpacityProps {
 }
 
 export const Btn: React.FC<BtnProps> = ({ children, onPress, icon, style }) => {
-  const iconColor = useThemeColor({}, "icon");
-  const textColor = useThemeColor({}, "text");
+  const [iconColor, textColor] = useThemeColor("icon", "text");
 
   return (
     <Div style={{ alignItems: "baseline" }}>
@@ -50,7 +49,7 @@ interface IconBtnProps extends TouchableOpacityProps {
 }
 
 export const IconBtn: React.FC<IconBtnProps> = ({ icon, size, onPress }) => {
-  const iconColor = useThemeColor({}, "icon");
+  const [iconColor] = useThemeColor("icon");
   const sized: number = size || 18;
 
   return (
