@@ -48,6 +48,7 @@ export default {
           },
         },
       ],
+      "expo-font",
     ],
     experiments: {
       typedRoutes: true,

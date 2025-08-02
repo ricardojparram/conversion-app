@@ -10,6 +10,7 @@ import { CalculatedConvertions } from "@/types/convertions";
 import { IconBtn } from "@/components/Btn";
 import { ActivityIndicator, Platform } from "react-native";
 import { useThemeColor } from "@/hooks/useThemeColor";
+import { TrendingUp } from "@/components/icons/TendringUp";
 
 export default function Index() {
   const iconColor = useThemeColor({}, "icon");
@@ -81,36 +82,49 @@ export default function Index() {
             <Div
               style={{
                 width: "100%",
-                justifyContent: "space-between",
-                flexDirection: "row",
-                height: 50,
               }}
             >
-              <Typography
-                type="title"
+              <Div
                 style={{
-                  textAlignVertical: "center",
                   display: "flex",
+                  flexDirection: "row",
                   alignItems: "center",
+                  justifyContent: "center",
+                  gap: 10,
+                  marginBottom: 5,
                 }}
               >
-                Cambio rápido
-              </Typography>
-
-              <Div>
-                {isFetching ? (
-                  <ActivityIndicator
-                    size="large"
-                    color={iconColor}
-                    style={{
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                    }}
-                  />
-                ) : (
-                  <IconBtn onPress={fetch} icon="refresh" size={35} />
-                )}
+                <TrendingUp width={24} height={24} color={iconColor} />
+                <Typography
+                  type="title"
+                  style={{
+                    textAlignVertical: "center",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
+                  Cambio rápido
+                </Typography>
+              </Div>
+              <Div
+                style={{
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Typography
+                  type="md"
+                  style={{
+                    textAlignVertical: "center",
+                    display: "flex",
+                    alignItems: "center",
+                    color: "rgba(0, 0, 0, 0.5)",
+                  }}
+                >
+                  Bolívares a Dólares
+                </Typography>
               </Div>
             </Div>
             <Currency
