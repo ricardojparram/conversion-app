@@ -8,6 +8,8 @@ import { Div } from "@/components/Div";
 import { Pressable, Touchable, TouchableOpacity } from "react-native";
 import { Copy } from "./icons/Copy";
 import { useRef } from "react";
+import { setStringAsync } from "expo-clipboard";
+import { formatCurrency } from "@/utils/formatCurrency";
 
 interface CurrencyInputType extends CurrencyInputProps {
   label?: string;
@@ -31,6 +33,9 @@ export function Currency({
     "border"
   );
   const inputRef = useRef<CurrencyInput>(null);
+  const copy = async () => {
+    await setStringAsync(formatCurrency(value ?? 0, suffix));
+  };
 
   return (
     <Div>
@@ -93,7 +98,7 @@ export function Currency({
           </Div>
         </Pressable>
         <TouchableOpacity
-          onPress={() => console.log("press")}
+          onPress={copy}
           style={{
             position: "absolute",
             right: 0,
