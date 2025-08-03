@@ -11,10 +11,13 @@ import { ActivityIndicator, Platform } from "react-native";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { TrendingUp } from "@/components/icons/TendringUp";
 import { ArrowRight } from "@/components/icons/ArrowRight";
-import { Dimensions } from "react-native";
 
 export default function Index() {
-  const [iconColor, bgColor] = useThemeColor("icon", "background");
+  const [iconColor, bgColor, textSecondaryColor] = useThemeColor(
+    "icon",
+    "background",
+    "textSecondary"
+  );
   const [bs, setBs] = useState<number | null>(0);
   const [usd, setUSD] = useState<number | null>(0);
   const [isFetching, setIsFetching] = useState(false);
@@ -49,6 +52,7 @@ export default function Index() {
     const data = calculateConversions(bs, usd, convertions);
     setCalculated(data);
   }, [usd, bs, convertions]);
+  const [bill, setBill] = useState<number | null>(0);
 
   return (
     <ScrollDiv style={{ backgroundColor: bgColor }}>
@@ -122,14 +126,14 @@ export default function Index() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    color: "rgba(0, 0, 0, 0.5)",
+                    color: textSecondaryColor,
                   }}
                 >
                   Bolívares{" "}
                   <ArrowRight
                     width={16}
                     height={16}
-                    color="rgba(0, 0, 0, 0.5)"
+                    color={textSecondaryColor}
                     style={{ transform: [{ translateY: 3 }] }}
                   />{" "}
                   Dólares

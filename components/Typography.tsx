@@ -56,7 +56,7 @@ export function Typography({
   type = "default",
   ...rest
 }: ThemedTextProps) {
-  const color = useThemeColor({ light: lightColor, dark: darkColor }, "text");
+  const [color] = useThemeColor("text");
 
   return <Text style={[{ color }, styles[type], style]} {...rest} />;
 }

@@ -8,18 +8,22 @@ const tintColorDark = "#eb8a02";
 
 module.exports.Colors = {
   light: {
-    text: "#11181C",
+    text: "#25364b",
+    textSecondary: "rgba(0, 0, 0, 0.5)",
     background: "#f9fafc",
     backgroundSecondary: "#ffffff",
+    border: "rgba(0, 0, 0, 0.2)",
     tint: tintColorLight,
     icon: "#16a249",
     tabIconDefault: "#687076",
     tabIconSelected: tintColorLight,
   },
   dark: {
-    text: "#ECEDEE",
-    background: "#151718",
-    backgroundSecondary: "#ffffff",
+    text: "#e6eff8",
+    textSecondary: "rgba(255, 255, 255, 0.8)",
+    background: "#0e151d",
+    backgroundSecondary: "#1a2633",
+    border: "rgba(255, 255, 255, 0.2)",
     tint: tintColorDark,
     icon: "#16a249",
     tabIconDefault: "#9BA1A6",

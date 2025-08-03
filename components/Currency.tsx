@@ -5,6 +5,9 @@ import CurrencyInput, {
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { Typography } from "@/components/Typography";
 import { Div } from "@/components/Div";
+import { Pressable, Touchable, TouchableOpacity } from "react-native";
+import { Copy } from "./icons/Copy";
+import { useRef } from "react";
 
 interface CurrencyInputType extends CurrencyInputProps {
   label?: string;
@@ -21,7 +24,13 @@ export function Currency({
   onPress,
   ...props
 }: CurrencyInputType) {
-  const [textColor, bgColor] = useThemeColor("text", "backgroundSecondary");
+  const [textColor, textSecondaryColor, bgColor, borderColor] = useThemeColor(
+    "text",
+    "textSecondary",
+    "backgroundSecondary",
+    "border"
+  );
+  const inputRef = useRef<CurrencyInput>(null);
 
   return (
     <Div>
@@ -31,31 +40,73 @@ export function Currency({
         </Typography>
       )}
 
-      <CurrencyInput
-        value={value}
-        onChangeValue={onChangeValue}
-        suffix={"  " + suffix}
-        delimiter={delimiter}
-        separator={separator}
-        precision={precision}
-        minValue={0}
-        maxValue={9999999999999}
-        onChangeText={onChangeText}
+      <Div
         style={{
-          backgroundColor: bgColor,
-          color: textColor,
-          fontSize: 20,
-          textAlign: "right",
-          borderStyle: "solid",
-          borderWidth: 1,
-          borderColor: "rgba(0, 0, 0, 0.2)",
-          borderRadius: 10,
-          paddingRight: 10,
-          height: 50,
+          position: "relative",
         }}
-        onPress={onPress}
-        {...props}
-      />
+      >
+        <Pressable
+          onPress={() => inputRef.current?.focus()}
+          onLongPress={() => console.log("long")}
+        >
+          <Div style={{ position: "relative" }} pointerEvents="none">
+            <Typography
+              type="subtitle"
+              style={{
+                position: "absolute",
+                left: 14,
+                top: 14,
+                zIndex: 99,
+                fontSize: 16,
+                color: textSecondaryColor,
+              }}
+            >
+              {suffix}
+            </Typography>
+            <CurrencyInput
+              ref={inputRef}
+              value={value}
+              onChangeValue={onChangeValue}
+              delimiter={delimiter}
+              separator={separator}
+              precision={precision}
+              minValue={0}
+              maxValue={9999999999999999999}
+              onChangeText={onChangeText}
+              style={{
+                backgroundColor: bgColor,
+                color: textColor,
+                fontSize: 16,
+                lineHeight: 32,
+                fontFamily: "Poppins_600SemiBold",
+                borderStyle: "solid",
+                borderWidth: 1,
+                borderColor: borderColor,
+                borderRadius: 10,
+                padding: 0,
+                paddingLeft: 40,
+                height: 50,
+              }}
+              onPress={onPress}
+              {...props}
+            />
+          </Div>
+        </Pressable>
+        <TouchableOpacity
+          onPress={() => console.log("press")}
+          style={{
+            position: "absolute",
+            right: 0,
+            top: 2,
+            bottom: 0,
+            width: 40,
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <Copy width={20} height={20} color={textSecondaryColor} />
+        </TouchableOpacity>
+      </Div>
     </Div>
   );
 }
