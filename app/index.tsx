@@ -3,11 +3,11 @@ import { Typography } from "@/components/Typography";
 import { Div } from "@/components/Div";
 import { ScrollDiv } from "@/components/ScrollDiv";
 import { Currency } from "@/components/Currency";
-import { ConversionDisplay } from "@/components/Convertions";
+import { ConvertionDisplay } from "@/components/Convertions";
 import { calculateConversions } from "@/utils/calculateConvertions";
 import { convertionStore } from "@/store/convertions";
 import { CalculatedConvertions } from "@/types/convertions";
-import { ActivityIndicator, Platform } from "react-native";
+import { Platform } from "react-native";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { TrendingUp } from "@/components/icons/TendringUp";
 import { ArrowRight } from "@/components/icons/ArrowRight";
@@ -165,7 +165,8 @@ export default function Index() {
               justifyContent: "center",
             }}
           >
-            <ConversionDisplay
+            <ConvertionDisplay />
+            {/* <ConversionDisplay
               label="Paralelo"
               date={convertions.dateParalelo}
               calculatedUSD={calculatedConvertions.calculatedUSD.paralelo}
@@ -182,7 +183,7 @@ export default function Index() {
               label="Promedio"
               calculatedUSD={calculatedConvertions.calculatedUSD.promedio}
               calculatedBs={calculatedConvertions.calculatedBs.promedio}
-            />
+            /> */}
           </Div>
         </Div>
       </Div>
