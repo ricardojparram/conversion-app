@@ -11,6 +11,7 @@ import { Platform } from "react-native";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { TrendingUp } from "@/components/icons/TendringUp";
 import { ArrowRight } from "@/components/icons/ArrowRight";
+import { ArrowDownUp } from "@/components/icons/ArrowDownUp";
 
 export default function Index() {
   const [iconColor, bgColor, textSecondaryColor] = useThemeColor(
@@ -72,7 +73,7 @@ export default function Index() {
         <Div
           style={{
             alignItems: "center",
-            paddingTop: 30,
+            paddingTop: 40,
             maxWidth: 400,
           }}
         >
@@ -80,13 +81,14 @@ export default function Index() {
             style={{
               gap: 10,
               width: "100%",
-              paddingVertical: 10,
+              paddingVertical: 15,
               paddingHorizontal: 40,
             }}
           >
             <Div
               style={{
                 width: "100%",
+                marginBottom: 20,
               }}
             >
               <Div
@@ -146,9 +148,14 @@ export default function Index() {
               onFocus={() => setUSD(0)}
               label="Bolívares"
             />
-
+            <ArrowDownUp
+              width={20}
+              height={20}
+              color={iconColor}
+              style={{ alignSelf: "center", marginTop: 10 }}
+            />
             <Currency
-              suffix="$  "
+              suffix="$"
               value={usd}
               onChangeValue={setUSD}
               onFocus={() => setBs(0)}
@@ -166,24 +173,6 @@ export default function Index() {
             }}
           >
             <ConvertionDisplay />
-            {/* <ConversionDisplay
-              label="Paralelo"
-              date={convertions.dateParalelo}
-              calculatedUSD={calculatedConvertions.calculatedUSD.paralelo}
-              calculatedBs={calculatedConvertions.calculatedBs.paralelo}
-            />
-
-            <ConversionDisplay
-              label="BCV"
-              date={convertions.dateBcv}
-              calculatedUSD={calculatedConvertions.calculatedUSD.bcv}
-              calculatedBs={calculatedConvertions.calculatedBs.bcv}
-            />
-            <ConversionDisplay
-              label="Promedio"
-              calculatedUSD={calculatedConvertions.calculatedUSD.promedio}
-              calculatedBs={calculatedConvertions.calculatedBs.promedio}
-            /> */}
           </Div>
         </Div>
       </Div>
