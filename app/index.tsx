@@ -11,7 +11,6 @@ import { ActivityIndicator, Platform } from "react-native";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { TrendingUp } from "@/components/icons/TendringUp";
 import { ArrowRight } from "@/components/icons/ArrowRight";
-import { setStringAsync } from "expo-clipboard";
 
 export default function Index() {
   const [iconColor, bgColor, textSecondaryColor] = useThemeColor(
