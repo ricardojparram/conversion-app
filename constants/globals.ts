@@ -1,3 +1,4 @@
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const SUPABASE_KEY = process.env.EXPO_PUBLIC_SUPABASE_KEY;
 
-export { API_URL };
+export { SUPABASE_URL, SUPABASE_KEY };

@@ -1,9 +1,13 @@
-export interface Convertions {
-  bcv: number;
-  paralelo: number;
-  dateBcv: string;
-  dateParalelo: string;
+export interface Convertion {
+  code: string;
+  currency_id: number;
+  currency_name: string;
+  rate: number;
+  rate_date: string;
+  symbol: string;
 }
+
+export type Convertions = Convertion[];
 
 export interface ConvertionList {
   bcv: number;

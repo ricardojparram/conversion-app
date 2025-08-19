@@ -1,37 +1,55 @@
-import { useState } from "react";
-import { Typography } from "@/components/Typography";
-import { Div } from "@/components/Div";
+import { TouchableOpacity, ViewStyle } from "react-native";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { formatCurrency } from "@/utils/formatCurrency";
-// ...existing code...
+import { Typography } from "@/components/Typography";
+import { Div } from "@/components/Div";
 
-// Datos de ejemplo para las fuentes de tipo de cambio
-const fuentesCambio = [
-  {
-    id: "bcv_usd",
-    label: "BCV Dólar",
-    value: 29.03,
-    display: "Bs",
-    active: true,
-  },
-  {
-    id: "bcv_eur",
-    label: "BCV Euro",
-    value: 39.42,
-    display: "Bs",
-    active: false,
-  },
-  {
-    id: "binance",
-    label: "Binance P2P",
-    value: 37.2,
-    display: "Bs",
-    active: false,
-  },
-];
+// Tipo para permitir span por tarjeta (1 o 2 columnas)
+type FuenteCambio = {
+  id: string;
+  label: string;
+  value: number;
+  display: string;
+  span?: 1 | 2; // por defecto 1 columna
+};
 
-export const ConvertionDisplay = () => {
-  // Puedes agregar lógica para cambiar el activo si lo necesitas
+// Se elimina el array de datos hardcodeado de aquí
+
+export const ConvertionDisplay = ({
+  fuentes,
+  selectedId,
+  onSelect,
+}: {
+  fuentes: FuenteCambio[];
+  selectedId: number;
+  onSelect: (id: number) => void;
+}) => {
+  const convertions = [
+    {
+      code: "USD",
+      currency_id: 1,
+      currency_name: "BCV Dólar",
+      rate: 136.89,
+      rate_date: "2025-08-19T00:00:00",
+      symbol: "$",
+    },
+    {
+      code: "EUR",
+      currency_id: 2,
+      currency_name: "BCV Euro",
+      rate: 160.28,
+      rate_date: "2025-08-19T00:00:00",
+      symbol: "€",
+    },
+    {
+      code: "USDT",
+      currency_id: 3,
+      currency_name: "Binance Dolar",
+      rate: 195.02,
+      rate_date: "2025-08-18T21:30:02.477928",
+      symbol: "$",
+    },
+  ];
   const [textColor, textSecondaryColor, bgColor, borderColor, iconColor] =
     useThemeColor(
       "text",
@@ -57,49 +75,54 @@ export const ConvertionDisplay = () => {
       </Div>
       <Div
         style={{
-          display: "flex",
-          flex: 2,
           flexDirection: "row",
           flexWrap: "wrap",
           gap: 12,
         }}
       >
-        {fuentesCambio.map((fuente) => (
-          <Div
-            key={fuente.id}
-            style={{
-              backgroundColor: fuente.active ? iconColor : bgColor,
-              flex: 1,
-              borderStyle: "solid",
-              borderColor: fuente.active ? "#037c2f" : borderColor,
-              borderWidth: fuente.active ? 2 : 1,
-              borderRadius: 10,
-              flexDirection: "column",
-              justifyContent: "center",
-              alignItems: "center",
-              padding: 10,
-              // boxShadow: fuente.active ? "0 2px 8px rgba(0,0,0,0.08)" : "none",
-            }}
-          >
-            <Typography
-              type="defaultSemiBold"
-              style={{
-                color: fuente.active ? "white" : textSecondaryColor,
-              }}
+        {convertions.map((row, i) => {
+          const isActive = row.currency_id === selectedId;
+          const span =
+            (i + 1) % 2 === 1 && i + 1 === convertions.length ? 2 : 1;
+          const containerStyle: ViewStyle = {
+            width: span === 2 ? "100%" : "48%",
+            backgroundColor: isActive ? iconColor : bgColor,
+            borderStyle: "solid",
+            borderColor: isActive ? "#037c2f" : borderColor,
+            borderWidth: isActive ? 2 : 1,
+            borderRadius: 10,
+            flexDirection: "column",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: isActive ? 9 : 10,
+          };
+
+          return (
+            <TouchableOpacity
+              key={row.currency_id}
+              onPress={() => onSelect(row.currency_id)}
+              style={containerStyle}
             >
-              {fuente.label}
-            </Typography>
-            <Typography
-              type="defaultSemiBold"
-              style={{
-                marginTop: 2,
-                color: fuente.active ? "white" : iconColor,
-              }}
-            >
-              {formatCurrency(fuente.value, "Bs")}
-            </Typography>
-          </Div>
-        ))}
+              <Typography
+                type="defaultSemiBold"
+                style={{
+                  color: isActive ? "white" : textSecondaryColor,
+                }}
+              >
+                {row.currency_name}
+              </Typography>
+              <Typography
+                type="defaultSemiBold"
+                style={{
+                  marginTop: 2,
+                  color: isActive ? "white" : iconColor,
+                }}
+              >
+                {formatCurrency(row.rate, "Bs")}
+              </Typography>
+            </TouchableOpacity>
+          );
+        })}
       </Div>
     </Div>
   );

@@ -4,7 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { formatDate } from "@/utils/formatDate";
 import { ApiResponse } from "@/types/apiTypes";
 import { Convertions, ConversionStore } from "@/types/convertions";
-import { API_URL } from "@/constants/globals";
+import { supabase } from "@/utils/supabase";
 
 export const convertionStore = create<ConversionStore>()(
   devtools(
@@ -20,72 +20,19 @@ export const convertionStore = create<ConversionStore>()(
 
         // Methods
         fetchConvertions: async () => {
-          if (!API_URL) {
-            console.error("API_URL no está definido.");
-            return;
-          }
-          const body = JSON.stringify({
-            query: `
-              query ($countryCode: String!) {
-                getCountryConversions(payload: {countryCode: $countryCode}) {
-                  conversionRates {
-                    baseValue
-                    official
-                    principal
-                    rateCurrency {
-                      name
-                      symbol
-                    }
-                  }
-                  dateParalelo
-                  dateBcv
-                }
-              }
-            `,
-            variables: {
-              countryCode: "VE",
-            },
-          });
           set({ isFetching: true });
-          const res: ApiResponse = await fetch(API_URL, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body,
-          })
-            .then((response) => response.json())
-            .catch((error) => console.error("Error:", error))
-            .finally(() => set({ isFetching: false }));
+          let { data, error } = await supabase
+            .rpc('get_latest_exchange_rates')
+          if (error) console.error(error)
+          set({ isFetching: false, convertions: data as Convertions });
 
-          const { conversionRates, dateBcv, dateParalelo } =
-            res.data.getCountryConversions;
-
-          const allDollars = conversionRates.filter(
-            (e) => e.rateCurrency.symbol === "$",
-          );
-          const currencies = allDollars.reduce(
-            (acc, el) => {
-              if (el.official) {
-                acc.bcv = el.baseValue;
-              } else {
-                acc.paralelo = el.baseValue;
-              }
-              return acc;
-            },
-            { paralelo: 0, bcv: 0 } as Omit<
-              Convertions,
-              "dateBcv" | "dateParalelo"
-            >,
-          );
-
-          set({
-            convertions: {
-              ...currencies,
-              dateBcv: formatDate(dateBcv),
-              dateParalelo: formatDate(dateParalelo),
-            },
-          });
+          // set({
+          //   convertions: {
+          //     ...currencies,
+          //     dateBcv: formatDate(dateBcv),
+          //     dateParalelo: formatDate(dateParalelo),
+          //   },
+          // });
         },
       }),
       {
