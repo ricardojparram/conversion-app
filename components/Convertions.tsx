@@ -3,61 +3,28 @@ import { useThemeColor } from "@/hooks/useThemeColor";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { Typography } from "@/components/Typography";
 import { Div } from "@/components/Div";
-
-// Tipo para permitir span por tarjeta (1 o 2 columnas)
-type FuenteCambio = {
-  id: string;
-  label: string;
-  value: number;
-  display: string;
-  span?: 1 | 2; // por defecto 1 columna
-};
-
-// Se elimina el array de datos hardcodeado de aquí
+import { Convertions } from "@/types/convertions";
+import { getCaracasDate } from "@/utils/getCaracasDate";
+import { useState } from "react";
+import { formatDate } from "@/utils/formatDate";
 
 export const ConvertionDisplay = ({
-  fuentes,
+  convertions,
   selectedId,
   onSelect,
 }: {
-  fuentes: FuenteCambio[];
+  convertions: Convertions;
   selectedId: number;
   onSelect: (id: number) => void;
 }) => {
-  const convertions = [
-    {
-      code: "USD",
-      currency_id: 1,
-      currency_name: "BCV Dólar",
-      rate: 136.89,
-      rate_date: "2025-08-19T00:00:00",
-      symbol: "$",
-    },
-    {
-      code: "EUR",
-      currency_id: 2,
-      currency_name: "BCV Euro",
-      rate: 160.28,
-      rate_date: "2025-08-19T00:00:00",
-      symbol: "€",
-    },
-    {
-      code: "USDT",
-      currency_id: 3,
-      currency_name: "Binance Dolar",
-      rate: 195.02,
-      rate_date: "2025-08-18T21:30:02.477928",
-      symbol: "$",
-    },
-  ];
-  const [textColor, textSecondaryColor, bgColor, borderColor, iconColor] =
-    useThemeColor(
-      "text",
-      "textSecondary",
-      "backgroundSecondary",
-      "border",
-      "icon"
-    );
+  console.table(JSON.stringify(convertions, null, 4));
+  const [textSecondaryColor, bgColor, borderColor, iconColor] = useThemeColor(
+    "textSecondary",
+    "backgroundSecondary",
+    "border",
+    "icon"
+  );
+  const [updatedAt, setUpdatedAt] = useState<string>("31/7/25 20:32");
   return (
     <Div style={{ paddingTop: 20 }}>
       <Div
@@ -70,7 +37,7 @@ export const ConvertionDisplay = ({
       >
         <Typography type="md">Fuentes</Typography>
         <Typography type="md" style={{ opacity: 0.7 }}>
-          Actualizado: 31/7/25 20:32
+          Actualizado: {updatedAt}
         </Typography>
       </Div>
       <Div
@@ -94,13 +61,27 @@ export const ConvertionDisplay = ({
             flexDirection: "column",
             justifyContent: "center",
             alignItems: "center",
-            padding: isActive ? 9 : 10,
+            padding: isActive ? 15 : 16,
           };
+
+          let rate = row.rate;
+          let date = row.date;
+          if (row.source === "BCV") {
+            const fechaCaracas = getCaracasDate();
+            const fechaFija = getCaracasDate(row.date);
+            if (fechaCaracas < fechaFija) {
+              rate = row.rate_old;
+              date = row.date_old;
+            }
+          }
 
           return (
             <TouchableOpacity
               key={row.currency_id}
-              onPress={() => onSelect(row.currency_id)}
+              onPress={() => {
+                onSelect(row.currency_id);
+                setUpdatedAt(formatDate(new Date(date).getTime()));
+              }}
               style={containerStyle}
             >
               <Typography
@@ -118,7 +99,7 @@ export const ConvertionDisplay = ({
                   color: isActive ? "white" : iconColor,
                 }}
               >
-                {formatCurrency(row.rate, "Bs")}
+                {formatCurrency(rate, "Bs")}
               </Typography>
             </TouchableOpacity>
           );

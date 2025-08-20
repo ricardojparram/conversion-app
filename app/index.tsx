@@ -13,12 +13,6 @@ import { TrendingUp } from "@/components/icons/TendringUp";
 import { ArrowRight } from "@/components/icons/ArrowRight";
 import { ArrowDownUp } from "@/components/icons/ArrowDownUp";
 
-const fuentesCambio = [
-  { id: "bcv_usd", label: "BCV Dólar", value: 29.03, display: "Bs", span: 1 },
-  { id: "bcv_eur", label: "BCV Euro", value: 39.42, display: "Bs", span: 1 },
-  { id: "binance", label: "Binance P2P", value: 37.2, display: "Bs", span: 2 },
-];
-
 export default function Index() {
   const [iconColor, bgColor, textSecondaryColor] = useThemeColor(
     "icon",
@@ -41,7 +35,7 @@ export default function Index() {
   useEffect(() => {
     fetch();
   }, []);
-  const [selectedFuenteId, setSelectedFuenteId] = useState("bcv_usd"); // ID inicial
+  const [selectedFuenteId, setSelectedFuenteId] = useState(1);
 
   return (
     <ScrollDiv style={{ backgroundColor: bgColor }}>
@@ -161,7 +155,7 @@ export default function Index() {
             }}
           >
             <ConvertionDisplay
-              fuentes={fuentesCambio}
+              convertions={convertions}
               selectedId={selectedFuenteId}
               onSelect={setSelectedFuenteId}
             />

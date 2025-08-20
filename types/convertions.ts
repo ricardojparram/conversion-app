@@ -2,8 +2,11 @@ export interface Convertion {
   code: string;
   currency_id: number;
   currency_name: string;
+  source: string;
   rate: number;
-  rate_date: string;
+  date: string;
+  rate_old: number;
+  date_old: string;
   symbol: string;
 }
 
