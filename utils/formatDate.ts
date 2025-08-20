@@ -1,4 +1,4 @@
-export function formatDate(timestamp) {
+export function formatDate(timestamp: number): string {
   if (typeof timestamp !== "number" || isNaN(timestamp)) {
     throw new Error("El timestamp debe ser un número válido.");
   }
@@ -15,7 +15,6 @@ export function formatDate(timestamp) {
 
   horas = horas % 12;
   horas = horas ? horas : 12;
-  horas = String(horas).padStart(2, "0");
 
   return `${dia}/${mes}/${año} ${horas}:${minutos} ${ampm}`;
 }
