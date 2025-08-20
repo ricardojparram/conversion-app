@@ -10,21 +10,21 @@ import { formatDate } from "@/utils/formatDate";
 
 export const ConvertionDisplay = ({
   convertions,
-  selectedId,
-  onSelect,
+  setRate,
 }: {
   convertions: Convertions;
-  selectedId: number;
-  onSelect: (id: number) => void;
+  setRate: React.Dispatch<React.SetStateAction<number>>;
 }) => {
-  console.table(JSON.stringify(convertions, null, 4));
   const [textSecondaryColor, bgColor, borderColor, iconColor] = useThemeColor(
     "textSecondary",
     "backgroundSecondary",
     "border",
     "icon"
   );
-  const [updatedAt, setUpdatedAt] = useState<string>("31/7/25 20:32");
+  const [updatedAt, setUpdatedAt] = useState<string>(
+    formatDate(new Date().getTime())
+  );
+  const [selectedId, setSelectedId] = useState<number>(1);
   return (
     <Div style={{ paddingTop: 20 }}>
       <Div
@@ -61,7 +61,7 @@ export const ConvertionDisplay = ({
             flexDirection: "column",
             justifyContent: "center",
             alignItems: "center",
-            padding: isActive ? 15 : 16,
+            padding: isActive ? 11 : 12,
           };
 
           let rate = row.rate;
@@ -79,7 +79,8 @@ export const ConvertionDisplay = ({
             <TouchableOpacity
               key={row.currency_id}
               onPress={() => {
-                onSelect(row.currency_id);
+                setRate(+rate);
+                setSelectedId(row.currency_id);
                 setUpdatedAt(formatDate(new Date(date).getTime()));
               }}
               style={containerStyle}

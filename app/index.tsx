@@ -4,14 +4,14 @@ import { Div } from "@/components/Div";
 import { ScrollDiv } from "@/components/ScrollDiv";
 import { Currency } from "@/components/Currency";
 import { ConvertionDisplay } from "@/components/Convertions";
-import { calculateConversions } from "@/utils/calculateConvertions";
+import { convertAmount } from "@/utils/calculateConvertions";
 import { convertionStore } from "@/store/convertions";
-import { CalculatedConvertions } from "@/types/convertions";
 import { Platform } from "react-native";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { TrendingUp } from "@/components/icons/TendringUp";
 import { ArrowRight } from "@/components/icons/ArrowRight";
 import { ArrowDownUp } from "@/components/icons/ArrowDownUp";
+import { getCaracasDate } from "@/utils/getCaracasDate";
 
 export default function Index() {
   const [iconColor, bgColor, textSecondaryColor] = useThemeColor(
@@ -22,6 +22,7 @@ export default function Index() {
   const [bs, setBs] = useState<number | null>(0);
   const [usd, setUSD] = useState<number | null>(0);
   const [isFetching, setIsFetching] = useState(false);
+  const [lastEdited, setLastEdited] = useState<"bs" | "usd">("bs");
   const convertions = convertionStore((state) => state.convertions);
   const fetchConvertions = convertionStore((state) => state.fetchConvertions);
   const fetch = async () => {
@@ -35,7 +36,60 @@ export default function Index() {
   useEffect(() => {
     fetch();
   }, []);
-  const [selectedFuenteId, setSelectedFuenteId] = useState(1);
+  const [rate, setRate] = useState(0);
+  useEffect(() => {
+    const fechaCaracas = getCaracasDate();
+    const fechaFija = getCaracasDate(convertions[0].date);
+    if (fechaCaracas < fechaFija) {
+      setRate(convertions[0].rate_old);
+    } else {
+      setRate(convertions[0].rate);
+    }
+    handleUsdChange(1);
+  }, [convertions]);
+
+  useEffect(() => {
+    console.log("Rate changed:", rate);
+    if (lastEdited === "bs") {
+      const newUsd = convertAmount(bs || 0, rate, "bsToUsd");
+      setUSD(newUsd);
+    } else {
+      const newBs = convertAmount(usd || 0, rate, "usdToBs");
+      setBs(newBs);
+    }
+  }, [rate]);
+
+  const handleBsChange = (newBs: number | null) => {
+    setLastEdited("bs");
+    if (newBs === null) {
+      setBs(null);
+      setUSD(null);
+      return;
+    }
+    if (newBs !== bs) {
+      setBs(newBs);
+      const newUsd = convertAmount(newBs, rate, "bsToUsd");
+      setUSD(newUsd);
+    }
+  };
+
+  const handleUsdChange = (newUsd: number | null) => {
+    setLastEdited("usd");
+    if (newUsd === null) {
+      setBs(null);
+      setUSD(null);
+      return;
+    }
+    if (newUsd !== usd) {
+      setUSD(newUsd);
+      const newBs = convertAmount(newUsd, rate, "usdToBs");
+      setBs(newBs);
+    }
+  };
+  const resetInputs = () => {
+    setBs(0);
+    setUSD(0);
+  };
 
   return (
     <ScrollDiv style={{ backgroundColor: bgColor }}>
@@ -126,8 +180,8 @@ export default function Index() {
             </Div>
             <Currency
               value={bs}
-              onChangeValue={setBs}
-              onFocus={() => setUSD(0)}
+              onChangeValue={handleBsChange}
+              onFocus={resetInputs}
               label="Bolívares"
             />
             <ArrowDownUp
@@ -139,8 +193,8 @@ export default function Index() {
             <Currency
               suffix="$"
               value={usd}
-              onChangeValue={setUSD}
-              onFocus={() => setBs(0)}
+              onChangeValue={handleUsdChange}
+              onFocus={resetInputs}
               label="Dólares"
             />
           </Div>
@@ -154,11 +208,7 @@ export default function Index() {
               justifyContent: "center",
             }}
           >
-            <ConvertionDisplay
-              convertions={convertions}
-              selectedId={selectedFuenteId}
-              onSelect={setSelectedFuenteId}
-            />
+            <ConvertionDisplay convertions={convertions} setRate={setRate} />
           </Div>
         </Div>
       </Div>
