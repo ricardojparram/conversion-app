@@ -49,7 +49,6 @@ export default function Index() {
   }, [convertions]);
 
   useEffect(() => {
-    console.log("Rate changed:", rate);
     if (lastEdited === "bs") {
       const newUsd = convertAmount(bs || 0, rate, "bsToUsd");
       setUSD(newUsd);

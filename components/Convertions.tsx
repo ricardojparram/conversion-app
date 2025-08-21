@@ -47,7 +47,7 @@ export const ConvertionDisplay = ({
           gap: 12,
         }}
       >
-        {convertions.map((row, i) => {
+        {convertions.length > 0 && convertions.map((row, i) => {
           const isActive = row.currency_id === selectedId;
           const span =
             (i + 1) % 2 === 1 && i + 1 === convertions.length ? 2 : 1;

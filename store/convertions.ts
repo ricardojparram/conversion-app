@@ -10,7 +10,7 @@ export const convertionStore = create<ConversionStore>()(
   devtools(
     persist(
       (set, get) => ({
-        convertions: {} as Convertions,
+        convertions: [] as Convertions,
         isFetching: false,
 
         // Setters
