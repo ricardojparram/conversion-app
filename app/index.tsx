@@ -41,7 +41,7 @@ export default function Index() {
   }, []);
   const [rate, setRate] = useState(0);
   useEffect(() => {
-    if (convertions.length === 0) return;
+    if (!convertions[0].date) return;
     const fechaCaracas = getCaracasDate();
     const fechaFija = getCaracasDate(convertions[0].date);
     if (fechaCaracas < fechaFija) {

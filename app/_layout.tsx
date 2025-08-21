@@ -1,5 +1,6 @@
 import { DarkTheme, ThemeProvider } from "@react-navigation/native";
 import { Stack } from "expo-router";
+import Head from "expo-router/head";
 import { StatusBar } from "expo-status-bar";
 import {
   Poppins_400Regular,
@@ -10,6 +11,7 @@ import {
 
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
+import { Platform } from "react-native";
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -31,6 +33,11 @@ export default function RootLayout() {
     <ThemeProvider value={DarkTheme}>
       <Stack screenOptions={{ headerShown: false }} />
       <StatusBar style="auto" />
+      {Platform.OS === 'web' && (
+        <Head>
+          <title>Cambio rápido</title>
+        </Head>
+      )}
     </ThemeProvider>
   );
 }
