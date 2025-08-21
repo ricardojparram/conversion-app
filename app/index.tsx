@@ -18,7 +18,6 @@ export default function Index() {
     useThemeColor("icon", "background", "textSecondary", "text");
   const [bs, setBs] = useState<number | null>(0);
   const [usd, setUSD] = useState<number | null>(0);
-  const [isFetching, setIsFetching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [lastEdited, setLastEdited] = useState<"bs" | "usd">("bs");
   const convertions = convertionStore((state) => state.convertions);
@@ -26,9 +25,7 @@ export default function Index() {
   const fetch = async () => {
     setBs(0);
     setUSD(0);
-    setIsFetching(true);
     await fetchConvertions();
-    setIsFetching(false);
   };
 
   useEffect(() => {
@@ -41,15 +38,16 @@ export default function Index() {
   }, []);
   const [rate, setRate] = useState(0);
   useEffect(() => {
-    if (!convertions[0].date) return;
-    const fechaCaracas = getCaracasDate();
-    const fechaFija = getCaracasDate(convertions[0].date);
-    if (fechaCaracas < fechaFija) {
-      setRate(convertions[0].rate_old);
-    } else {
-      setRate(convertions[0].rate);
+    if (convertions[0]) {
+      const fechaCaracas = getCaracasDate();
+      const fechaFija = getCaracasDate(convertions[0].date);
+      if (fechaCaracas < fechaFija) {
+        setRate(convertions[0].rate_old);
+      } else {
+        setRate(convertions[0].rate);
+      }
+      handleUsdChange(1);
     }
-    handleUsdChange(1);
   }, [convertions]);
 
   useEffect(() => {
