@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Typography } from "@/components/Typography";
 import { Div } from "@/components/Div";
 import { ScrollDiv } from "@/components/ScrollDiv";
@@ -6,7 +6,7 @@ import { Currency } from "@/components/Currency";
 import { ConvertionDisplay } from "@/components/Convertions";
 import { convertAmount } from "@/utils/calculateConvertions";
 import { convertionStore } from "@/store/convertions";
-import { Platform } from "react-native";
+import { Platform, RefreshControl } from "react-native";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { TrendingUp } from "@/components/icons/TendringUp";
 import { ArrowRight } from "@/components/icons/ArrowRight";
@@ -14,14 +14,12 @@ import { ArrowDownUp } from "@/components/icons/ArrowDownUp";
 import { getCaracasDate } from "@/utils/getCaracasDate";
 
 export default function Index() {
-  const [iconColor, bgColor, textSecondaryColor] = useThemeColor(
-    "icon",
-    "background",
-    "textSecondary"
-  );
+  const [iconColor, bgColor, textSecondaryColor, textPrimaryColor] =
+    useThemeColor("icon", "background", "textSecondary", "text");
   const [bs, setBs] = useState<number | null>(0);
   const [usd, setUSD] = useState<number | null>(0);
   const [isFetching, setIsFetching] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [lastEdited, setLastEdited] = useState<"bs" | "usd">("bs");
   const convertions = convertionStore((state) => state.convertions);
   const fetchConvertions = convertionStore((state) => state.fetchConvertions);
@@ -35,6 +33,11 @@ export default function Index() {
 
   useEffect(() => {
     fetch();
+  }, []);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetch();
+    setRefreshing(false);
   }, []);
   const [rate, setRate] = useState(0);
   useEffect(() => {
@@ -52,7 +55,7 @@ export default function Index() {
     if (bs === 0 && usd === 0 && rate !== 0) {
       handleUsdChange(1);
       return;
-    };
+    }
     if (lastEdited === "bs") {
       const newUsd = convertAmount(bs || 0, rate, "bsToUsd");
       setUSD(newUsd);
@@ -95,7 +98,18 @@ export default function Index() {
   };
 
   return (
-    <ScrollDiv style={{ backgroundColor: bgColor }}>
+    <ScrollDiv
+      style={{ backgroundColor: bgColor }}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          title="Actualizando..."
+          progressBackgroundColor={"#e6eff8"}
+          colors={[iconColor]}
+        />
+      }
+    >
       <Div
         style={[
           {
