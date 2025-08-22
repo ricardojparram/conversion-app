@@ -11,7 +11,8 @@ import {
 
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
-import { Platform } from "react-native";
+import { Platform, View } from "react-native";
+import { useThemeColor } from "@/hooks/useThemeColor";
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -29,15 +30,22 @@ export default function RootLayout() {
   if (!loaded && !error) {
     return null;
   }
+  return <RootLayoutNav />;
+}
+
+function RootLayoutNav() {
+  const [backgroundColor] = useThemeColor("background");
   return (
     <ThemeProvider value={DarkTheme}>
-      <Stack screenOptions={{ headerShown: false }} />
-      <StatusBar style="auto" />
-      {Platform.OS === 'web' && (
-        <Head>
-          <title>Cambio rápido</title>
-        </Head>
-      )}
+      <View style={{ flex: 1, backgroundColor }}>
+        <Stack screenOptions={{ headerShown: false }} />
+        <StatusBar style="inverted" />
+        {Platform.OS === "web" && (
+          <Head>
+            <title>Cambio rápido</title>
+          </Head>
+        )}
+      </View>
     </ThemeProvider>
   );
 }
