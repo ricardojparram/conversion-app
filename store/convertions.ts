@@ -23,16 +23,14 @@ export const convertionStore = create<ConversionStore>()(
           set({ isFetching: true });
           let { data, error } = await supabase
             .rpc('get_latest_exchange_rates')
-          if (error) console.error(error)
+
+          if (error) {
+            console.error(error)
+            set({ isFetching: false });
+            throw new Error("Error fetching convertions");
+          }
           set({ isFetching: false, convertions: data as Convertions });
 
-          // set({
-          //   convertions: {
-          //     ...currencies,
-          //     dateBcv: formatDate(dateBcv),
-          //     dateParalelo: formatDate(dateParalelo),
-          //   },
-          // });
         },
       }),
       {

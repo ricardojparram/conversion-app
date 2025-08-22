@@ -12,6 +12,7 @@ import { TrendingUp } from "@/components/icons/TendringUp";
 import { ArrowRight } from "@/components/icons/ArrowRight";
 import { ArrowDownUp } from "@/components/icons/ArrowDownUp";
 import { getCaracasDate } from "@/utils/getCaracasDate";
+import { Tag } from "@/components/Tag";
 
 export default function Index() {
   const [iconColor, bgColor, textSecondaryColor, textPrimaryColor] =
@@ -20,21 +21,33 @@ export default function Index() {
   const [usd, setUSD] = useState<number | null>(0);
   const [refreshing, setRefreshing] = useState(false);
   const [lastEdited, setLastEdited] = useState<"bs" | "usd">("bs");
+  const [notification, setNotification] = useState<"success" | "error" | null>(
+    null
+  );
   const convertions = convertionStore((state) => state.convertions);
   const fetchConvertions = convertionStore((state) => state.fetchConvertions);
   const fetch = async () => {
-    setBs(0);
-    setUSD(0);
     await fetchConvertions();
   };
 
   useEffect(() => {
     fetch();
   }, []);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetch();
-    setRefreshing(false);
+    try {
+      await fetch();
+      setNotification("success");
+    } catch (error) {
+      console.error("Error refreshing convertions:", error);
+      setNotification("error");
+    } finally {
+      setRefreshing(false);
+      setTimeout(() => {
+        setNotification(null);
+      }, 2000);
+    }
   }, []);
   const [rate, setRate] = useState(0);
   useEffect(() => {
@@ -98,7 +111,7 @@ export default function Index() {
 
   return (
     <ScrollDiv
-      style={{ backgroundColor: bgColor }}
+      style={{ backgroundColor: bgColor, position: "relative" }}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -109,6 +122,23 @@ export default function Index() {
         />
       }
     >
+      <Div
+        style={{
+          position: "absolute",
+          bottom: -130,
+          insetInline: 0,
+          zIndex: 99,
+          display: "flex",
+          flexDirection: "row",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        {notification === "error" && (
+          <Tag variant="error">Error al actualizar</Tag>
+        )}
+        {notification === "success" && <Tag variant="success">Actualizado</Tag>}
+      </Div>
       <Div
         style={[
           {
