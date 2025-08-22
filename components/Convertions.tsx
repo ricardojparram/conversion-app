@@ -52,7 +52,8 @@ export const ConvertionDisplay = ({
         style={{
           flexDirection: "row",
           flexWrap: "wrap",
-          gap: 12,
+          rowGap: 12,
+          columnGap: "4%",
         }}
       >
         {convertions.length > 0 &&

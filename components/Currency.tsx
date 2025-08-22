@@ -71,8 +71,6 @@ export function Currency({
 
   return (
     <>
-      {/* Overlay invisible que cierra el tooltip al tocar fuera */}
-
       <Div>
         {label && (
           <Typography style={{ paddingLeft: 5 }} type="md">
@@ -159,7 +157,7 @@ export function Currency({
             style={{
               right: 40,
               top: -30,
-              zIndex: 99, // Asegura que esté por encima del overlay
+              zIndex: 99,
             }}
           >
             <TouchableOpacity onPress={paste}>

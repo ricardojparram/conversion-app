@@ -37,7 +37,7 @@ export const Tag = ({
     <Div
       className={`tag tag-${variant}`}
       style={{
-        paddingHorizontal: 16,
+        paddingHorizontal: 18,
         paddingVertical: 8,
         borderRadius: 20,
         borderWidth: 2,
