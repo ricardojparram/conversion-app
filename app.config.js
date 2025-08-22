@@ -5,7 +5,7 @@ export default {
     slug: "conversion-app",
     version: "1.0.0",
     orientation: "portrait",
-    icon: "./assets/images/favicon.png",
+    icon: "./assets/images/favicon_web.png",
     scheme: "myapp",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
@@ -15,14 +15,14 @@ export default {
     android: {
       adaptiveIcon: {
         foregroundImage: "./assets/images/favicon.png",
-        backgroundColor: "#ffffff",
+        backgroundColor: "#16a249",
       },
       package: "com.ricardojparram.conversionapp",
     },
     web: {
       bundler: "metro",
       output: "static",
-      favicon: "./assets/images/favicon.png",
+      favicon: "./assets/images/web/favicon_web.png",
     },
     plugins: [
       [
@@ -42,10 +42,7 @@ export default {
           image: "./assets/images/favicon.png",
           imageWidth: 200,
           resizeMode: "contain",
-          backgroundColor: Colors.light.background,
-          dark: {
-            backgroundColor: Colors.dark.background,
-          },
+          backgroundColor: "#16a249",
         },
       ],
       "expo-font",
