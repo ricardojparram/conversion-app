@@ -9,9 +9,15 @@
             "type": "image/x-icon"
         },
         {
-            "src": "assets/images/favicon.png",
+            "src": "icon-192.png",
             "type": "image/png",
-            "sizes": "any",
+            "sizes": "192x192",
+            "purpose": "any"
+        },
+        {
+            "src": "icon-512.png",
+            "type": "image/png",
+            "sizes": "512x512",
             "purpose": "any maskable"
         }
     ],
