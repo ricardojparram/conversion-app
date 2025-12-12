@@ -23,6 +23,25 @@ export default {
       bundler: "metro",
       output: "static",
       favicon: "./assets/images/web/favicon_web.png",
+      manifest: {
+        name: "Cambio rápido",
+        short_name: "Cambio rápido",
+        description: "Aplicación de conversión de divisas",
+        theme_color: "#16a249",
+        background_color: "#16a249",
+        display: "standalone",
+        orientation: "portrait",
+        scope: "/",
+        start_url: "/",
+        icons: [
+          {
+            src: "./assets/images/favicon.png",
+            sizes: "any",
+            type: "image/png",
+            purpose: "any maskable",
+          },
+        ],
+      },
     },
     plugins: [
       [
