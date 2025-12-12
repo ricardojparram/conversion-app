@@ -1,0 +1,24 @@
+{
+    "short_name": "Cambio rápido",
+    "name": "Cambio rápido",
+    "description": "Aplicación de conversión de divisas",
+    "icons": [
+        {
+            "src": "favicon.ico",
+            "sizes": "64x64 32x32 24x24 16x16",
+            "type": "image/x-icon"
+        },
+        {
+            "src": "assets/images/favicon.png",
+            "type": "image/png",
+            "sizes": "any",
+            "purpose": "any maskable"
+        }
+    ],
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "portrait",
+    "theme_color": "#16a249",
+    "background_color": "#16a249"
+}
