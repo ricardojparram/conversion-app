@@ -32,6 +32,8 @@ export default {
             enableProguardInReleaseBuilds: true,
             extraProguardRules:
               "-keep class com.google.android.gms.internal.consent_sdk.** { *; }",
+            jvmVersion: "17",
+            useLegacyPackaging: true,
           },
         },
       ],
