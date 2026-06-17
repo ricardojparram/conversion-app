@@ -11,6 +11,7 @@ export default {
     newArchEnabled: true,
     ios: {
       supportsTablet: true,
+      bundleIdentifier: "com.ricardojparram.conversionapp",
     },
     android: {
       adaptiveIcon: {
