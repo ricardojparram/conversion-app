@@ -18,6 +18,7 @@ export default {
         backgroundColor: "#16a249",
       },
       package: "com.ricardojparram.conversionapp",
+      versionCode: 1,
     },
     web: {
       bundler: "metro",
@@ -67,6 +68,8 @@ export default {
         },
       ],
       "expo-font",
+      "expo-sqlite",
+      "expo-status-bar"
     ],
     experiments: {
       typedRoutes: true,
