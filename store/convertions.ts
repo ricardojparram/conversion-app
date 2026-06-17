@@ -1,42 +1,45 @@
 import { create } from "zustand";
-import { persist, createJSONStorage, devtools } from "zustand/middleware";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { formatDate } from "@/utils/formatDate";
-import { ApiResponse } from "@/types/apiTypes";
 import { Convertions, ConversionStore } from "@/types/convertions";
-import { supabase } from "@/utils/supabase";
+import { syncRates } from "@/database/sync.service";
+import { getLatestRates } from "@/database/rates.repository";
+import * as Network from 'expo-network';
 
-export const convertionStore = create<ConversionStore>()(
-  devtools(
-    persist(
-      (set, get) => ({
-        convertions: [] as Convertions,
-        isFetching: false,
+export const convertionStore = create<ConversionStore>()((set, get) => ({
+  convertions: [] as Convertions,
+  isFetching: false,
 
-        // Setters
-        setConvertions: (convertions) => {
-          set({ convertions });
-        },
+  setConvertions: (convertions) => {
+    set({ convertions });
+  },
 
-        // Methods
-        fetchConvertions: async () => {
-          set({ isFetching: true });
-          let { data, error } = await supabase
-            .rpc('get_latest_exchange_rates')
+  fetchConvertions: async () => {
+    set({ isFetching: true });
 
-          if (error) {
-            console.error(error)
-            set({ isFetching: false });
-            throw new Error("Error fetching convertions");
-          }
-          set({ isFetching: false, convertions: data as Convertions });
+    // 1. Load from local database immediately (offline-first)
+    try {
+      const localRates = await getLatestRates();
+      if (localRates && localRates.length > 0) {
+        set({ convertions: localRates });
+      }
+    } catch (e) {
+      console.error("Error loading local rates:", e);
+    }
 
-        },
-      }),
-      {
-        name: "convertions",
-        storage: createJSONStorage(() => AsyncStorage),
-      },
-    ),
-  ),
-);
+    // 2. Check network connection
+    try {
+      const networkState = await Network.getNetworkStateAsync();
+      
+      // 3. If online, sync with Supabase
+      if (networkState.isConnected) {
+        const syncResult = await syncRates();
+        if (syncResult.success && syncResult.rates) {
+          set({ convertions: syncResult.rates });
+        }
+      }
+    } catch (e) {
+      console.error("Error syncing rates:", e);
+    } finally {
+      set({ isFetching: false });
+    }
+  },
+}));
