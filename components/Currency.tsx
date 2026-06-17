@@ -15,9 +15,7 @@ import { useRef, useState, useEffect } from "react";
 import { setStringAsync, getStringAsync } from "expo-clipboard";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { Tooltip } from "./Tooltip";
-import { Btn } from "./Btn";
 import { Paste } from "./icons/Paste";
-import { Dimensions } from "react-native";
 
 interface CurrencyInputType extends CurrencyInputProps {
   label?: string;
