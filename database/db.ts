@@ -1,6 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 
-const DB_NAME = 'cambio_rapido_v2.db';
+const DB_NAME = 'cambio_rapido_v3.db';
 
 const migrations: string[] = [
   `CREATE TABLE IF NOT EXISTS rates (
@@ -15,7 +15,7 @@ const migrations: string[] = [
     date_old TEXT,
     symbol TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    UNIQUE(source, date)
+    UNIQUE(currency_id, date)
   );`,
   `CREATE TABLE IF NOT EXISTS sync_metadata (
     key TEXT PRIMARY KEY,
