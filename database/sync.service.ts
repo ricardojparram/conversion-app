@@ -43,7 +43,8 @@ export async function syncRates(): Promise<SyncResult> {
     await upsertRates(rates);
     await setLastSyncTime(Date.now());
 
-    return { success: true, rates };
+    const updatedRates = await getLatestRates();
+    return { success: true, rates: updatedRates };
   } catch (e) {
     console.error('[syncRates] Network error:', e);
 

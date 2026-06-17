@@ -59,7 +59,13 @@ export default function Index() {
       } else {
         setRate(convertions[0].rate);
       }
-      handleUsdChange(1);
+      if (bs === 0 && usd === 0) {
+        handleUsdChange(1);
+      } else if (lastEdited === "bs") {
+        handleBsChange(bs);
+      } else {
+        handleUsdChange(usd);
+      }
     }
   }, [convertions]);
 

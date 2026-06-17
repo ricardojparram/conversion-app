@@ -36,7 +36,8 @@ export async function getLatestRates(): Promise<Convertion[]> {
      FROM rates
      WHERE (source, date) IN (
        SELECT source, MAX(date) FROM rates GROUP BY source
-     )`
+     )
+     ORDER BY currency_id ASC`
   );
 }
 
