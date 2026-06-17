@@ -21,7 +21,7 @@ export default function Index() {
   const [usd, setUSD] = useState<number | null>(0);
   const [refreshing, setRefreshing] = useState(false);
   const [lastEdited, setLastEdited] = useState<"bs" | "usd">("bs");
-  const [notification, setNotification] = useState<"success" | "error" | null>(
+  const [notification, setNotification] = useState<"success" | "error" | "offline" | null>(
     null
   );
   const convertions = convertionStore((state) => state.convertions);
@@ -39,9 +39,13 @@ export default function Index() {
     try {
       await fetch();
       setNotification("success");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error refreshing convertions:", error);
-      setNotification("error");
+      if (error.message === "No network connection") {
+        setNotification("offline");
+      } else {
+        setNotification("error");
+      }
     } finally {
       setRefreshing(false);
       setTimeout(() => {
@@ -142,6 +146,9 @@ export default function Index() {
       >
         {notification === "error" && (
           <Tag variant="error">Error al actualizar</Tag>
+        )}
+        {notification === "offline" && (
+          <Tag variant="error">Sin conexión</Tag>
         )}
         {notification === "success" && <Tag variant="success">Actualizado</Tag>}
       </Div>

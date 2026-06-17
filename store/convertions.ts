@@ -34,10 +34,15 @@ export const convertionStore = create<ConversionStore>()((set, get) => ({
         const syncResult = await syncRates();
         if (syncResult.success && syncResult.rates) {
           set({ convertions: syncResult.rates });
+        } else {
+          throw new Error(syncResult.error || "Failed to sync rates");
         }
+      } else {
+        throw new Error("No network connection");
       }
     } catch (e) {
       console.error("Error syncing rates:", e);
+      throw e;
     } finally {
       set({ isFetching: false });
     }
