@@ -18,8 +18,8 @@ export async function upsertRates(rates: Convertion[]): Promise<void> {
         $source: r.source,
         $rate: r.rate,
         $date: r.date,
-        $rateOld: r.rate_old,
-        $dateOld: r.date_old,
+        $rateOld: r.rate_old ?? null,
+        $dateOld: r.date_old ?? null,
         $symbol: r.symbol,
       });
     }
