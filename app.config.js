@@ -5,7 +5,7 @@ export default {
     slug: "conversion-app",
     version: "1.0.0",
     orientation: "portrait",
-    icon: "./assets/images/favicon_web.png",
+    icon: "./assets/images/web/favicon_web.png",
     scheme: "myapp",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
