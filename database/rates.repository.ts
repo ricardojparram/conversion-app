@@ -34,8 +34,8 @@ export async function getLatestRates(): Promise<Convertion[]> {
   return db.getAllAsync<Convertion>(
     `SELECT code, currency_id, currency_name, source, rate, date, rate_old, date_old, symbol
      FROM rates
-     WHERE (source, date) IN (
-       SELECT source, MAX(date) FROM rates GROUP BY source
+     WHERE (currency_id, date) IN (
+       SELECT currency_id, MAX(date) FROM rates GROUP BY currency_id
      )
      ORDER BY currency_id ASC`
   );
