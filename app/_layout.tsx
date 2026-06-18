@@ -41,7 +41,7 @@ function RootLayoutNav() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <View style={{ flex: 1, backgroundColor }}>
         <Stack screenOptions={{ headerShown: false }} />
-        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} backgroundColor={backgroundColor} />
+        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} backgroundColor="transparent" translucent={true} />
         {Platform.OS === "web" && (
           <Head>
             <title>Cambio rápido</title>
