@@ -269,6 +269,28 @@ export default function Index() {
           >
             <ConvertionDisplay convertions={convertions} setRate={setRate} />
           </Div>
+
+          <Div
+            style={{
+              width: "100%",
+              paddingHorizontal: 40,
+              paddingVertical: 20,
+              marginTop: 10,
+              alignItems: "center",
+            }}
+          >
+            <Typography
+              type="md"
+              style={{
+                textAlign: "center",
+                color: textSecondaryColor,
+                fontSize: 11,
+                opacity: 0.8,
+              }}
+            >
+              Tasas referenciales obtenidas de fuentes públicas. Aplicación con fines estrictamente informativos.
+            </Typography>
+          </Div>
         </Div>
       </Div>
     </ScrollDiv>
