@@ -41,9 +41,6 @@ app-example
 .vercel
 
 # locks
-yarn.lock
-package-lock.json
-pnpm-lock.yaml
 
 android/
 ios/
