@@ -1,4 +1,5 @@
 import * as SQLite from 'expo-sqlite';
+import { Platform } from 'react-native';
 
 const DB_NAME = 'cambio_rapido_v3.db';
 
@@ -26,6 +27,9 @@ const migrations: string[] = [
 let dbInstance: SQLite.SQLiteDatabase | null = null;
 
 export async function getDatabase(): Promise<SQLite.SQLiteDatabase> {
+  if (Platform.OS === 'web') {
+    throw new Error('SQLite not supported on Web in this app, using localStorage instead.');
+  }
   if (dbInstance) return dbInstance;
 
   const db = await SQLite.openDatabaseAsync(DB_NAME);

@@ -3,7 +3,16 @@ import type { Convertion } from '@/types/convertions';
 import { getDatabase } from './db';
 import { upsertRates, getLatestRates } from './rates.repository';
 
+import { Platform } from 'react-native';
+
 export async function getLastSyncTime(): Promise<number | null> {
+  if (Platform.OS === 'web') {
+    try {
+      const syncStr = localStorage.getItem('last_sync');
+      return syncStr ? Number(syncStr) : null;
+    } catch { return null; }
+  }
+
   const db = await getDatabase();
 
   const row = await db.getFirstAsync<{ value: string }>(
@@ -14,6 +23,13 @@ export async function getLastSyncTime(): Promise<number | null> {
 }
 
 async function setLastSyncTime(timestamp: number): Promise<void> {
+  if (Platform.OS === 'web') {
+    try {
+      localStorage.setItem('last_sync', String(timestamp));
+    } catch {}
+    return;
+  }
+
   const db = await getDatabase();
 
   await db.runAsync(

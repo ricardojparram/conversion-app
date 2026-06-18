@@ -1,7 +1,17 @@
 import type { Convertion } from '@/types/convertions';
 import { getDatabase } from './db';
+import { Platform } from 'react-native';
 
 export async function upsertRates(rates: Convertion[]): Promise<void> {
+  if (Platform.OS === 'web') {
+    try {
+      localStorage.setItem('cached_rates', JSON.stringify(rates));
+    } catch (e) {
+      if (__DEV__) console.error("localStorage error:", e);
+    }
+    return;
+  }
+
   const db = await getDatabase();
 
   const statement = await db.prepareAsync(
@@ -29,6 +39,16 @@ export async function upsertRates(rates: Convertion[]): Promise<void> {
 }
 
 export async function getLatestRates(): Promise<Convertion[]> {
+  if (Platform.OS === 'web') {
+    try {
+      const cached = localStorage.getItem('cached_rates');
+      if (cached) return JSON.parse(cached) as Convertion[];
+    } catch (e) {
+      if (__DEV__) console.error("localStorage error:", e);
+    }
+    return [];
+  }
+
   const db = await getDatabase();
 
   return db.getAllAsync<Convertion>(
