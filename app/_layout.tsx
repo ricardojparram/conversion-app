@@ -39,7 +39,7 @@ function RootLayoutNav() {
     <ThemeProvider value={DarkTheme}>
       <View style={{ flex: 1, backgroundColor }}>
         <Stack screenOptions={{ headerShown: false }} />
-        <StatusBar style="inverted" />
+        <StatusBar style="auto" backgroundColor={backgroundColor} />
         {Platform.OS === "web" && (
           <Head>
             <title>Cambio rápido</title>
