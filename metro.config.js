@@ -8,4 +8,6 @@ config.resolver.unstable_conditionNames = [
   "react-native",
 ];
 
+config.resolver.assetExts.push("wasm");
+
 module.exports = config;
