@@ -174,8 +174,11 @@ export default function Index() {
       >
         <Div
           style={{
+            flex: 1,
+            justifyContent: "center",
             alignItems: "center",
-            paddingTop: 40,
+            width: "100%",
+            alignSelf: "center",
             maxWidth: 400,
           }}
         >
