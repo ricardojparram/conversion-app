@@ -9,7 +9,7 @@ import { convertionStore } from "@/store/convertions";
 import { Platform, RefreshControl, Modal, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useThemeColor } from "@/hooks/useThemeColor";
-import { TrendingUp } from "@/components/icons/TendringUp";
+import { TrendingUp } from "@/components/icons/TrendingUp";
 import { ArrowRight } from "@/components/icons/ArrowRight";
 import { ArrowDownUp } from "@/components/icons/ArrowDownUp";
 import { Info } from "@/components/icons/Info";
@@ -44,7 +44,9 @@ export default function Index() {
       await fetch();
       setNotification("success");
     } catch (error: any) {
-      console.error("Error refreshing convertions:", error);
+      if (__DEV__) {
+        console.error("Error refreshing convertions:", error);
+      }
       if (error.message === "No network connection") {
         setNotification("offline");
       } else {
@@ -163,12 +165,11 @@ export default function Index() {
             width: "100%",
             flex: 1,
           },
-          // @ts-ignore
-          Platform.OS === "web" && {
+          Platform.OS === "web" ? {
             height: "100dvh",
             justifyContent: "center",
             alignItems: "center",
-          },
+          } as any : {},
         ]}
       >
         <Div

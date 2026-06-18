@@ -3,13 +3,12 @@
  * https://docs.expo.dev/guides/color-schemes/
  */
 
-//@ts-ignore
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
-export function useThemeColor(
-  ...colors: string[]
+export function useThemeColor<T extends keyof typeof Colors.light & keyof typeof Colors.dark>(
+  ...colors: T[]
 ) {
-  const theme = useColorScheme() ?? 'light';
+  const theme = (useColorScheme() ?? 'light') as 'light' | 'dark';
   return colors.map((colorName) => Colors[theme][colorName]);
 }

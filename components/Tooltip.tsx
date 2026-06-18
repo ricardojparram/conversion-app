@@ -10,10 +10,10 @@ export const Tooltip = ({
   setOpen,
   style,
 }: {
-  children: any;
+  children: React.ReactNode;
   open: boolean;
   setOpen: (open: boolean) => void;
-  style?: any;
+  style?: import("react-native").ViewStyle;
 }) => {
   const [bgColor, borderColor] = useThemeColor("backgroundSecondary", "border");
 
@@ -39,7 +39,7 @@ export const Tooltip = ({
       <Div
         style={{
           position: "absolute",
-          display: open ? "block" : "none",
+          display: open ? "flex" : "none",
           backgroundColor: bgColor,
           borderStyle: "solid",
           borderWidth: 1,
