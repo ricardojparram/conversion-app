@@ -46,4 +46,5 @@ package-lock.json
 pnpm-lock.yaml
 
 android/
-ios/.codegraph/
+ios/
+.codegraph/
