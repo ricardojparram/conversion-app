@@ -6,17 +6,20 @@ import { Currency } from "@/components/Currency";
 import { ConvertionDisplay } from "@/components/Convertions";
 import { convertAmount } from "@/utils/calculateConvertions";
 import { convertionStore } from "@/store/convertions";
-import { Platform, RefreshControl } from "react-native";
+import { Platform, RefreshControl, Modal, Pressable } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { TrendingUp } from "@/components/icons/TendringUp";
 import { ArrowRight } from "@/components/icons/ArrowRight";
 import { ArrowDownUp } from "@/components/icons/ArrowDownUp";
+import { Info } from "@/components/icons/Info";
+import { X } from "@/components/icons/X";
 import { getCaracasDate } from "@/utils/getCaracasDate";
 import { Tag } from "@/components/Tag";
 
 export default function Index() {
-  const [iconColor, bgColor, textSecondaryColor, textPrimaryColor] =
-    useThemeColor("icon", "background", "textSecondary", "text");
+  const [iconColor, bgColor, textSecondaryColor, textPrimaryColor, borderColor] =
+    useThemeColor("icon", "background", "textSecondary", "text", "border");
   const [bs, setBs] = useState<number | null>(0);
   const [usd, setUSD] = useState<number | null>(0);
   const [refreshing, setRefreshing] = useState(false);
@@ -24,6 +27,7 @@ export default function Index() {
   const [notification, setNotification] = useState<"success" | "error" | "offline" | null>(
     null
   );
+  const [isPolicyVisible, setIsPolicyVisible] = useState(false);
   const convertions = convertionStore((state) => state.convertions);
   const fetchConvertions = convertionStore((state) => state.fetchConvertions);
   const fetch = async () => {
@@ -122,6 +126,7 @@ export default function Index() {
   return (
     <ScrollDiv
       style={{ backgroundColor: bgColor, position: "relative" }}
+      contentContainerStyle={{ flexGrow: 1 }}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -156,6 +161,7 @@ export default function Index() {
         style={[
           {
             width: "100%",
+            flex: 1,
           },
           // @ts-ignore
           Platform.OS === "web" && {
@@ -269,30 +275,92 @@ export default function Index() {
           >
             <ConvertionDisplay convertions={convertions} setRate={setRate} />
           </Div>
-
-          <Div
+        </Div>
+        <Div
+          style={{
+            width: "100%",
+            paddingHorizontal: 40,
+            paddingVertical: 30,
+            marginTop: "auto",
+            alignItems: "center",
+          }}
+        >
+          <Pressable 
+            onPress={() => setIsPolicyVisible(true)}
             style={{
-              width: "100%",
-              paddingHorizontal: 40,
-              paddingVertical: 20,
-              marginTop: 10,
+              flexDirection: "row",
               alignItems: "center",
+              gap: 6,
+              opacity: 0.5,
+              padding: 10,
             }}
           >
+            <Info width={14} height={14} color={textSecondaryColor} />
             <Typography
               type="md"
               style={{
-                textAlign: "center",
                 color: textSecondaryColor,
-                fontSize: 11,
-                opacity: 0.8,
+                fontSize: 12,
               }}
             >
-              Tasas referenciales obtenidas de fuentes públicas. Aplicación con fines estrictamente informativos.
+              Aviso Legal y Privacidad
             </Typography>
-          </Div>
+          </Pressable>
         </Div>
       </Div>
+
+      <Modal
+        visible={isPolicyVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setIsPolicyVisible(false)}
+      >
+        <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }} edges={['top', 'bottom']}>
+          <Div 
+            style={{ 
+              flexDirection: "row", 
+              alignItems: "center", 
+              paddingHorizontal: 24, 
+              paddingVertical: 16,
+              borderBottomWidth: 1,
+              borderBottomColor: borderColor
+            }}
+          >
+            <Typography type="subtitle" style={{ flex: 1, fontSize: 18 }}>
+              Términos y Privacidad
+            </Typography>
+            <Pressable 
+              onPress={() => setIsPolicyVisible(false)} 
+              style={{ 
+                padding: 6,
+                backgroundColor: borderColor, 
+                borderRadius: 20 
+              }}
+            >
+              <X width={20} height={20} color={textSecondaryColor} />
+            </Pressable>
+          </Div>
+          
+          <ScrollDiv style={{ paddingHorizontal: 24, paddingVertical: 20 }}>
+            <Typography type="subtitle" style={{ marginBottom: 10, fontSize: 16 }}>
+              1. Descargo de Responsabilidad
+            </Typography>
+            <Typography type="md" style={{ color: textSecondaryColor, marginBottom: 24, fontSize: 14, lineHeight: 22 }}>
+              Esta aplicación tiene un fin estricta y exclusivamente <Typography type="md" style={{ fontFamily: "Poppins_700Bold", color: textSecondaryColor, fontSize: 14 }}>INFORMATIVO</Typography>. 
+              No fijamos, no influimos, no calculamos y no especulamos con las tasas de cambio mostradas. Toda la información proporcionada se recopila automáticamente de fuentes públicas y de terceros.
+              {"\n\n"}
+              No promovemos ni participamos en la compra, venta o intercambio de divisas, ni fomentamos la especulación financiera de ningún tipo. El uso que usted le dé a esta información es bajo su propio y exclusivo riesgo.
+            </Typography>
+
+            <Typography type="subtitle" style={{ marginBottom: 10, fontSize: 16 }}>
+              2. Privacidad y Datos
+            </Typography>
+            <Typography type="md" style={{ color: textSecondaryColor, marginBottom: 40, fontSize: 14, lineHeight: 22 }}>
+              La aplicación NO recopila, almacena, comparte ni transmite ningún tipo de información personal, financiera o de identificación del usuario. Funciona únicamente como un agregador de información pública.
+            </Typography>
+          </ScrollDiv>
+        </SafeAreaView>
+      </Modal>
     </ScrollDiv>
   );
 }
