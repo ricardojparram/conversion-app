@@ -1,7 +1,6 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from "expo-router/react-navigation";
 import { Stack } from "expo-router";
 import Head from "expo-router/head";
-import { StatusBar } from "expo-status-bar";
 import {
   Poppins_400Regular,
   Poppins_600SemiBold,
@@ -11,7 +10,7 @@ import {
 
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
-import { Platform, View } from "react-native";
+import { Platform, View, StatusBar } from "react-native";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { useColorScheme } from "@/hooks/useColorScheme";
 
@@ -41,7 +40,7 @@ function RootLayoutNav() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <View style={{ flex: 1, backgroundColor }}>
         <Stack screenOptions={{ headerShown: false }} />
-        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} backgroundColor="transparent" translucent={true} />
+        <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent={true} />
         {Platform.OS === "web" && (
           <Head>
             <title>Cambio rápido</title>

@@ -21,6 +21,10 @@ export default {
       package: "com.ricardojparram.conversionapp",
       versionCode: 1,
     },
+    androidStatusBar: {
+      translucent: true,
+      backgroundColor: "#00000000",
+    },
     web: {
       bundler: "metro",
       output: "static",
