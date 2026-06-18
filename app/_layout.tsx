@@ -36,10 +36,20 @@ export default function RootLayout() {
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const [backgroundColor] = useThemeColor("background");
+
+  const currentTheme = colorScheme === 'dark' ? DarkTheme : DefaultTheme;
+  const customTheme = {
+    ...currentTheme,
+    colors: {
+      ...currentTheme.colors,
+      background: backgroundColor,
+    },
+  };
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={customTheme}>
       <View style={{ flex: 1, backgroundColor }}>
-        <Stack screenOptions={{ headerShown: false }} />
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor } }} />
         <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent={true} />
         {Platform.OS === "web" && (
           <Head>
