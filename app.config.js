@@ -6,7 +6,7 @@ export default {
     version: "1.0.0",
     orientation: "portrait",
     icon: "./assets/images/web/favicon_web.png",
-    scheme: "myapp",
+    scheme: "cambiorapido",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
     ios: {
@@ -59,6 +59,8 @@ export default {
               "-keep class com.google.android.gms.internal.consent_sdk.** { *; }",
             jvmVersion: "17",
             useLegacyPackaging: true,
+            compileSdkVersion: 35,
+            targetSdkVersion: 35,
           },
         },
       ],
