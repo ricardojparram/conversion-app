@@ -59,7 +59,7 @@ export default {
               "-keep class com.google.android.gms.internal.consent_sdk.** { *; }",
             jvmVersion: "17",
             useLegacyPackaging: true,
-            compileSdkVersion: 35,
+            compileSdkVersion: 36,
             targetSdkVersion: 35,
           },
         },
