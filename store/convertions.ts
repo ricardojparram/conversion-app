@@ -2,7 +2,6 @@ import { create } from "zustand";
 import { Convertions, ConversionStore } from "@/types/convertions";
 import { syncRates } from "@/database/sync.service";
 import { getLatestRates, syncAndCacheHistory, getLocalRateHistory } from "@/database/rates.repository";
-import * as Network from 'expo-network';
 
 export const convertionStore = create<ConversionStore>()((set, get) => ({
   convertions: [] as Convertions,
@@ -27,20 +26,13 @@ export const convertionStore = create<ConversionStore>()((set, get) => ({
       console.error("Error loading local rates:", e);
     }
 
-    // 2. Check network connection
+    // 2. Sync with Supabase (try directly, fallback on error)
     try {
-      const networkState = await Network.getNetworkStateAsync();
-      
-      // 3. If online, sync with Supabase
-      if (networkState.isConnected) {
-        const syncResult = await syncRates();
-        if (syncResult.success && syncResult.rates) {
-          set({ convertions: syncResult.rates });
-        } else {
-          throw new Error(syncResult.error || "Failed to sync rates");
-        }
+      const syncResult = await syncRates();
+      if (syncResult.success && syncResult.rates) {
+        set({ convertions: syncResult.rates });
       } else {
-        throw new Error("No network connection");
+        throw new Error(syncResult.error || "Failed to sync rates");
       }
     } catch (e) {
       console.error("Error syncing rates:", e);
@@ -68,20 +60,17 @@ export const convertionStore = create<ConversionStore>()((set, get) => ({
       console.error("Error loading local rate history:", e);
     }
 
-    // 2. Check network to sync fresh history from Supabase
+    // 2. Sync fresh history from Supabase directly
     try {
-      const networkState = await Network.getNetworkStateAsync();
-      if (networkState.isConnected) {
-        const freshHistory = await syncAndCacheHistory(currencyId);
-        // Take last "days" points to fit filters
-        const filteredHistory = freshHistory.slice(-days);
-        set((state) => ({
-          rateHistory: {
-            ...state.rateHistory,
-            [currencyId]: filteredHistory,
-          },
-        }));
-      }
+      const freshHistory = await syncAndCacheHistory(currencyId);
+      // Take last "days" points to fit filters
+      const filteredHistory = freshHistory.slice(-days);
+      set((state) => ({
+        rateHistory: {
+          ...state.rateHistory,
+          [currencyId]: filteredHistory,
+        },
+      }));
     } catch (e) {
       console.warn("Could not sync fresh history, using cached data:", e);
     } finally {

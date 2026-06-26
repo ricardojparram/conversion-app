@@ -137,10 +137,12 @@ export async function getLocalRateHistory(
   }
 
   const db = await getDatabase();
-  return db.getAllAsync<{ rate: number; date: string }>(
+  const rows = await db.getAllAsync<{ rate: number; date: string }>(
     `SELECT rate, date FROM rates
-     WHERE currency_id = $id AND date >= date('now', $daysOffset)
-     ORDER BY date ASC`,
-    { $id: currencyId, $daysOffset: `-${days} days` }
+     WHERE currency_id = $id
+     ORDER BY date DESC
+     LIMIT $limit`,
+    { $id: currencyId, $limit: days }
   );
+  return rows.reverse();
 }
