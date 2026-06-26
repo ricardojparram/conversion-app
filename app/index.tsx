@@ -372,7 +372,6 @@ export default function Index() {
         onClose={() => setIsPolicyVisible(false)}
         title="Términos y Privacidad"
       >
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 10 }} showsVerticalScrollIndicator={false}>
           <Typography type="subtitle" style={{ marginBottom: 10, fontSize: 16 }}>
             1. Descargo de Responsabilidad
           </Typography>
@@ -389,7 +388,6 @@ export default function Index() {
           <Typography type="md" style={{ color: textSecondaryColor, marginBottom: 40, fontSize: 14, lineHeight: 22 }}>
             La aplicación NO recopila, almacena, comparte ni transmite ningún tipo de información personal, financiera o de identificación del usuario. Funciona únicamente como un agregador de información pública.
           </Typography>
-        </ScrollView>
       </BottomDrawer>
 
       <BottomDrawer
@@ -397,14 +395,12 @@ export default function Index() {
         onClose={() => setIsHistoryModalVisible(false)}
         title="Tendencia de Tasa"
       >
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 10 }} showsVerticalScrollIndicator={false}>
           {selectedCurrencyId > 0 && (
             <RateHistory
               currencyId={selectedCurrencyId}
               currencyName={activeCurrencyName}
             />
           )}
-        </ScrollView>
       </BottomDrawer>
     </ScrollDiv>
   );

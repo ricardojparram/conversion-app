@@ -8,6 +8,7 @@ import {
   useWindowDimensions,
   Pressable,
   Platform,
+  ScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemeColor } from "@/hooks/useThemeColor";
@@ -47,6 +48,11 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
   // Flag to check if component is active/mounted to avoid state updates after unmount
   const activeAnim = useRef<Animated.CompositeAnimation | null>(null);
 
+  const scrollY = useRef(0);
+  const handleScroll = (event: any) => {
+    scrollY.current = event.nativeEvent.contentOffset.y;
+  };
+
   useEffect(() => {
     if (activeAnim.current) {
       activeAnim.current.stop();
@@ -67,6 +73,7 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
       ]);
       activeAnim.current.start();
     } else {
+      scrollY.current = 0;
       activeAnim.current = Animated.parallel([
         Animated.timing(translateY, {
           toValue: screenHeight,
@@ -107,10 +114,13 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
   // PanResponder to track swipe down gestures on the handle / header area
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        // Trigger responder if swiping down significantly
-        return gestureState.dy > 5;
+        // Trigger responder if swiping down, scroll is at the top, and vertical drag exceeds horizontal drag
+        const isSwipingDown = gestureState.dy > 5;
+        const isScrollAtTop = scrollY.current <= 0;
+        const isVerticalMove = Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+        return isSwipingDown && isScrollAtTop && isVerticalMove;
       },
       onPanResponderMove: (_, gestureState) => {
         if (gestureState.dy > 0) {
@@ -182,11 +192,16 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
                 <Typography type="md" style={{ color: textSecondaryColor, fontSize: 14, fontFamily: "Poppins_600SemiBold" }}>✕</Typography>
               </Pressable>
             </View>
-            <View style={styles.content}>{children}</View>
+            <View style={[styles.content, { flex: 1 }]}>
+              <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 10 }} showsVerticalScrollIndicator={false}>
+                {children}
+              </ScrollView>
+            </View>
           </Animated.View>
         ) : (
           /* Mobile Layout: Bottom Sheet Drawer (Draggable) */
           <Animated.View
+            {...panResponder.panHandlers}
             style={[
               styles.mobileDrawer,
               {
@@ -199,7 +214,7 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
             ]}
           >
             {/* Drag Handle & Header (Gesture Responder area) */}
-            <View {...panResponder.panHandlers} style={styles.gestureHeader}>
+            <View style={styles.gestureHeader}>
               <View style={[styles.dragHandle, { backgroundColor: borderColor }]} />
               <Typography
                 type="subtitle"
@@ -215,7 +230,15 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
               </Typography>
             </View>
             <View style={[styles.content, { flex: 1 }]}>
-              {children}
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingVertical: 10 }}
+                showsVerticalScrollIndicator={false}
+                onScroll={handleScroll}
+                scrollEventThrottle={16}
+              >
+                {children}
+              </ScrollView>
             </View>
           </Animated.View>
         )}
