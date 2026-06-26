@@ -205,7 +205,7 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
             style={[
               styles.mobileDrawer,
               {
-                backgroundColor: bgSecondaryColor,
+                backgroundColor: bgColor,
                 transform: [{ translateY }],
                 paddingBottom: Math.max(insets.bottom, 24),
                 minHeight: screenHeight * 0.8,
@@ -232,7 +232,7 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
             <View style={[styles.content, { flex: 1 }]}>
               <ScrollView
                 style={{ flex: 1 }}
-                contentContainerStyle={{ paddingVertical: 10 }}
+                contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 10 }}
                 showsVerticalScrollIndicator={false}
                 onScroll={handleScroll}
                 scrollEventThrottle={16}
@@ -277,11 +277,11 @@ const styles = StyleSheet.create({
     width: "100%",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    paddingHorizontal: 24,
     flexShrink: 1,
   },
   gestureHeader: {
     paddingVertical: 14,
+    paddingHorizontal: 24,
     width: "100%",
   },
   dragHandle: {
