@@ -4,6 +4,7 @@ import { Div } from "@/components/Div";
 import { ScrollDiv } from "@/components/ScrollDiv";
 import { Currency } from "@/components/Currency";
 import { ConvertionDisplay } from "@/components/Convertions";
+import { RateHistory } from "@/components/RateHistory";
 import { convertAmount } from "@/utils/calculateConvertions";
 import { convertionStore } from "@/store/convertions";
 import { Platform, RefreshControl, Modal, Pressable, View } from "react-native";
@@ -28,7 +29,13 @@ export default function Index() {
     null
   );
   const [isPolicyVisible, setIsPolicyVisible] = useState(false);
+  const [selectedCurrencyId, setSelectedCurrencyId] = useState<number>(0);
+  
   const convertions = convertionStore((state) => state.convertions);
+  
+  const activeCurrency = convertions.find((c) => c.currency_id === selectedCurrencyId);
+  const activeCurrencyName = activeCurrency ? activeCurrency.currency_name : "";
+
   const fetchConvertions = convertionStore((state) => state.fetchConvertions);
   const fetch = async () => {
     await fetchConvertions();
@@ -278,7 +285,18 @@ export default function Index() {
               justifyContent: "center",
             }}
           >
-            <ConvertionDisplay convertions={convertions} setRate={setRate} />
+            <ConvertionDisplay
+              convertions={convertions}
+              setRate={setRate}
+              selectedId={selectedCurrencyId}
+              setSelectedId={setSelectedCurrencyId}
+            />
+            {selectedCurrencyId > 0 && (
+              <RateHistory
+                currencyId={selectedCurrencyId}
+                currencyName={activeCurrencyName}
+              />
+            )}
           </Div>
         </Div>
         <Div

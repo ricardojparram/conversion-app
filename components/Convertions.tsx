@@ -11,9 +11,13 @@ import { formatDate } from "@/utils/formatDate";
 export const ConvertionDisplay = ({
   convertions,
   setRate,
+  selectedId,
+  setSelectedId,
 }: {
   convertions: Convertions;
   setRate: React.Dispatch<React.SetStateAction<number>>;
+  selectedId: number;
+  setSelectedId: (id: number) => void;
 }) => {
   const [textSecondaryColor, bgColor, borderColor, iconColor] = useThemeColor(
     "textSecondary",
@@ -24,15 +28,20 @@ export const ConvertionDisplay = ({
   const [updatedAt, setUpdatedAt] = useState<string>(
     formatDate(new Date().getTime())
   );
-  const [selectedId, setSelectedId] = useState<number>(1);
   useEffect(() => {
     if (convertions.length > 0) {
-      const firstConversion = convertions[0];
-      setRate(+firstConversion.rate);
-      setSelectedId(firstConversion.currency_id);
-      setUpdatedAt(formatDate(new Date(firstConversion.date).getTime()));
+      const selected = convertions.find(c => c.currency_id === selectedId);
+      if (selected) {
+        setRate(+selected.rate);
+        setUpdatedAt(formatDate(new Date(selected.date).getTime()));
+      } else {
+        const firstConversion = convertions[0];
+        setRate(+firstConversion.rate);
+        setSelectedId(firstConversion.currency_id);
+        setUpdatedAt(formatDate(new Date(firstConversion.date).getTime()));
+      }
     }
-  }, [convertions, setRate]);
+  }, [convertions, setRate, selectedId, setSelectedId]);
   return (
     <Div style={{ paddingTop: 20 }}>
       <Div

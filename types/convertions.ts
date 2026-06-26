@@ -25,10 +25,13 @@ export interface CalculatedConvertions {
 export interface ConversionStore {
   convertions: Convertions;
   isFetching: boolean;
+  rateHistory: { [currencyId: number]: { rate: number; date: string }[] };
+  isFetchingHistory: boolean;
 
   // Setters
   setConvertions: (convertions: Convertions) => void;
 
   // Methods
   fetchConvertions: () => Promise<void>;
+  fetchHistory: (currencyId: number, days: number) => Promise<void>;
 }

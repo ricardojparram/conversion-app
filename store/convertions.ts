@@ -1,12 +1,14 @@
 import { create } from "zustand";
 import { Convertions, ConversionStore } from "@/types/convertions";
 import { syncRates } from "@/database/sync.service";
-import { getLatestRates } from "@/database/rates.repository";
+import { getLatestRates, syncAndCacheHistory, getLocalRateHistory } from "@/database/rates.repository";
 import * as Network from 'expo-network';
 
 export const convertionStore = create<ConversionStore>()((set, get) => ({
   convertions: [] as Convertions,
   isFetching: false,
+  rateHistory: {},
+  isFetchingHistory: false,
 
   setConvertions: (convertions) => {
     set({ convertions });
@@ -45,6 +47,45 @@ export const convertionStore = create<ConversionStore>()((set, get) => ({
       throw e;
     } finally {
       set({ isFetching: false });
+    }
+  },
+
+  fetchHistory: async (currencyId: number, days: number) => {
+    set({ isFetchingHistory: true });
+
+    // 1. First attempt loading from local SQLite immediately for instant UI response
+    try {
+      const localHistory = await getLocalRateHistory(currencyId, days);
+      if (localHistory && localHistory.length > 0) {
+        set((state) => ({
+          rateHistory: {
+            ...state.rateHistory,
+            [currencyId]: localHistory,
+          },
+        }));
+      }
+    } catch (e) {
+      console.error("Error loading local rate history:", e);
+    }
+
+    // 2. Check network to sync fresh history from Supabase
+    try {
+      const networkState = await Network.getNetworkStateAsync();
+      if (networkState.isConnected) {
+        const freshHistory = await syncAndCacheHistory(currencyId);
+        // Take last "days" points to fit filters
+        const filteredHistory = freshHistory.slice(-days);
+        set((state) => ({
+          rateHistory: {
+            ...state.rateHistory,
+            [currencyId]: filteredHistory,
+          },
+        }));
+      }
+    } catch (e) {
+      console.warn("Could not sync fresh history, using cached data:", e);
+    } finally {
+      set({ isFetchingHistory: false });
     }
   },
 }));
