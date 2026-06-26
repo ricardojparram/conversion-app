@@ -193,6 +193,8 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
                 backgroundColor: bgSecondaryColor,
                 transform: [{ translateY }],
                 paddingBottom: Math.max(insets.bottom, 24),
+                minHeight: screenHeight * 0.8,
+                maxHeight: screenHeight * 0.9,
               },
             ]}
           >
@@ -253,7 +255,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 24,
-    maxHeight: "88%",
     flexShrink: 1,
   },
   gestureHeader: {

@@ -372,7 +372,7 @@ export default function Index() {
         onClose={() => setIsPolicyVisible(false)}
         title="Términos y Privacidad"
       >
-        <ScrollView style={{ flexShrink: 1, maxHeight: 500 }} contentContainerStyle={{ paddingVertical: 10 }} showsVerticalScrollIndicator={false}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 10 }} showsVerticalScrollIndicator={false}>
           <Typography type="subtitle" style={{ marginBottom: 10, fontSize: 16 }}>
             1. Descargo de Responsabilidad
           </Typography>
@@ -397,7 +397,7 @@ export default function Index() {
         onClose={() => setIsHistoryModalVisible(false)}
         title="Tendencia de Tasa"
       >
-        <ScrollView style={{ flexShrink: 1, maxHeight: 520 }} contentContainerStyle={{ paddingVertical: 10 }} showsVerticalScrollIndicator={false}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 10 }} showsVerticalScrollIndicator={false}>
           {selectedCurrencyId > 0 && (
             <RateHistory
               currencyId={selectedCurrencyId}
