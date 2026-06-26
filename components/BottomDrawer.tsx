@@ -214,7 +214,7 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
                 {title}
               </Typography>
             </View>
-            <View style={styles.content}>
+            <View style={[styles.content, { flex: 1 }]}>
               {children}
             </View>
           </Animated.View>
