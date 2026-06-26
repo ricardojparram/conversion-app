@@ -5,6 +5,7 @@ import { ScrollDiv } from "@/components/ScrollDiv";
 import { Currency } from "@/components/Currency";
 import { ConvertionDisplay } from "@/components/Convertions";
 import { RateHistory } from "@/components/RateHistory";
+import { BottomDrawer } from "@/components/BottomDrawer";
 import { convertAmount } from "@/utils/calculateConvertions";
 import { convertionStore } from "@/store/convertions";
 import { Platform, RefreshControl, Modal, Pressable, View, useWindowDimensions, TouchableOpacity, StyleSheet } from "react-native";
@@ -366,176 +367,45 @@ export default function Index() {
         </Div>
       </Div>
 
-      <Modal
+      <BottomDrawer
         visible={isPolicyVisible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setIsPolicyVisible(false)}
+        onClose={() => setIsPolicyVisible(false)}
+        title="Términos y Privacidad"
       >
-        <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }} edges={['top', 'bottom']}>
-          <Div 
-            style={{ 
-              flexDirection: "row", 
-              alignItems: "center", 
-              paddingHorizontal: 24, 
-              paddingVertical: 16,
-              borderBottomWidth: 1,
-              borderBottomColor: borderColor
-            }}
-          >
-            <Typography type="subtitle" style={{ flex: 1, fontSize: 18 }}>
-              Términos y Privacidad
-            </Typography>
-            <Pressable 
-              onPress={() => setIsPolicyVisible(false)} 
-              style={{ 
-                padding: 6,
-                backgroundColor: borderColor, 
-                borderRadius: 20 
-              }}
-            >
-              <X width={20} height={20} color={textSecondaryColor} />
-            </Pressable>
-          </Div>
-          
-          <ScrollDiv style={{ paddingHorizontal: 24, paddingVertical: 20 }}>
-            <Typography type="subtitle" style={{ marginBottom: 10, fontSize: 16 }}>
-              1. Descargo de Responsabilidad
-            </Typography>
-            <Typography type="md" style={{ color: textSecondaryColor, marginBottom: 24, fontSize: 14, lineHeight: 22 }}>
-              Esta aplicación tiene un fin estricta y exclusivamente <Typography type="md" style={{ fontFamily: "Poppins_700Bold", color: textSecondaryColor, fontSize: 14 }}>INFORMATIVO</Typography>. 
-              No fijamos, no influimos, no calculamos y no especulamos con las tasas de cambio mostradas. Toda la información proporcionada se recopila automáticamente de fuentes públicas y de terceros.
-              {"\n\n"}
-              No promovemos ni participamos en la compra, venta o intercambio de divisas, ni fomentamos la especulación financiera de ningún tipo. El uso que usted le dé a esta información es bajo su propio y exclusivo riesgo.
-            </Typography>
+        <ScrollDiv style={{ paddingVertical: 10, maxHeight: 500 }}>
+          <Typography type="subtitle" style={{ marginBottom: 10, fontSize: 16 }}>
+            1. Descargo de Responsabilidad
+          </Typography>
+          <Typography type="md" style={{ color: textSecondaryColor, marginBottom: 24, fontSize: 14, lineHeight: 22 }}>
+            Esta aplicación tiene un fin estricta y exclusivamente <Typography type="md" style={{ fontFamily: "Poppins_700Bold", color: textSecondaryColor, fontSize: 14 }}>INFORMATIVO</Typography>. 
+            No fijamos, no influimos, no calculamos y no especulamos con las tasas de cambio mostradas. Toda la información proporcionada se recopila automáticamente de fuentes públicas y de terceros.
+            {"\n\n"}
+            No promovemos ni participamos en la compra, venta o intercambio de divisas, ni fomentamos la especulación financiera de ningún tipo. El uso que usted le dé a esta información es bajo su propio y exclusivo riesgo.
+          </Typography>
 
-            <Typography type="subtitle" style={{ marginBottom: 10, fontSize: 16 }}>
-              2. Privacidad y Datos
-            </Typography>
-            <Typography type="md" style={{ color: textSecondaryColor, marginBottom: 40, fontSize: 14, lineHeight: 22 }}>
-              La aplicación NO recopila, almacena, comparte ni transmite ningún tipo de información personal, financiera o de identificación del usuario. Funciona únicamente como un agregador de información pública.
-            </Typography>
-          </ScrollDiv>
-        </SafeAreaView>
-      </Modal>
+          <Typography type="subtitle" style={{ marginBottom: 10, fontSize: 16 }}>
+            2. Privacidad y Datos
+          </Typography>
+          <Typography type="md" style={{ color: textSecondaryColor, marginBottom: 40, fontSize: 14, lineHeight: 22 }}>
+            La aplicación NO recopila, almacena, comparte ni transmite ningún tipo de información personal, financiera o de identificación del usuario. Funciona únicamente como un agregador de información pública.
+          </Typography>
+        </ScrollDiv>
+      </BottomDrawer>
 
-      <Modal
+      <BottomDrawer
         visible={isHistoryModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setIsHistoryModalVisible(false)}
+        onClose={() => setIsHistoryModalVisible(false)}
+        title="Tendencia de Tasa"
       >
-        <View style={[styles.modalOverlay, !isDesktop && styles.modalOverlayMobile]}>
-          {/* Backdrop Click Trigger */}
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={() => setIsHistoryModalVisible(false)}
-          />
-
-          {isDesktop ? (
-            /* Desktop Layout: Centered Box with X close button */
-            <View style={[styles.desktopBox, { backgroundColor: bgSecondaryColor, borderColor }]}>
-              {/* Header */}
-              <View style={[styles.modalHeader, { borderBottomWidth: 1, borderBottomColor: borderColor }]}>
-                <Typography type="subtitle" style={{ flex: 1, fontSize: 18, color: textPrimaryColor }}>
-                  Tendencia de Tasa
-                </Typography>
-                <Pressable
-                  onPress={() => setIsHistoryModalVisible(false)}
-                  style={{
-                    padding: 6,
-                    backgroundColor: borderColor,
-                    borderRadius: 20
-                  }}
-                >
-                  <X width={20} height={20} color={textSecondaryColor} />
-                </Pressable>
-              </View>
-              {/* Chart Content */}
-              <ScrollDiv style={{ marginTop: 10 }}>
-                {selectedCurrencyId > 0 && (
-                  <RateHistory
-                    currencyId={selectedCurrencyId}
-                    currencyName={activeCurrencyName}
-                  />
-                )}
-              </ScrollDiv>
-            </View>
-          ) : (
-            /* Mobile Layout: Bottom Sheet Drawer (no X button, drag handle) */
-            <SafeAreaView
-              style={[styles.mobileDrawer, { backgroundColor: bgSecondaryColor }]}
-              edges={['bottom']}
-            >
-              {/* Drag Handle */}
-              <View style={[styles.dragHandle, { backgroundColor: borderColor }]} />
-              
-              {/* Header */}
-              <View style={styles.modalHeader}>
-                <Typography type="subtitle" style={{ fontSize: 18, fontFamily: "Poppins_600SemiBold", color: textPrimaryColor }}>
-                  Tendencia de Tasa
-                </Typography>
-              </View>
-
-              {/* Chart Content */}
-              <ScrollDiv style={{ maxHeight: 520 }}>
-                {selectedCurrencyId > 0 && (
-                  <RateHistory
-                    currencyId={selectedCurrencyId}
-                    currencyName={activeCurrencyName}
-                  />
-                )}
-              </ScrollDiv>
-            </SafeAreaView>
+        <ScrollDiv style={{ paddingVertical: 10, maxHeight: 520 }}>
+          {selectedCurrencyId > 0 && (
+            <RateHistory
+              currencyId={selectedCurrencyId}
+              currencyName={activeCurrencyName}
+            />
           )}
-        </View>
-      </Modal>
+        </ScrollDiv>
+      </BottomDrawer>
     </ScrollDiv>
   );
 }
-
-const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
-  },
-  modalOverlayMobile: {
-    justifyContent: "flex-end",
-  },
-  desktopBox: {
-    width: 440,
-    maxHeight: "85%",
-    borderRadius: 16,
-    borderWidth: 1,
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  mobileDrawer: {
-    width: "100%",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 40,
-  },
-  dragHandle: {
-    width: 36,
-    height: 5,
-    borderRadius: 2.5,
-    alignSelf: "center",
-    marginBottom: 16,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingBottom: 12,
-  },
-});
