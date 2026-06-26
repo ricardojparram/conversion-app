@@ -7,7 +7,7 @@ import { ConvertionDisplay } from "@/components/Convertions";
 import { RateHistory } from "@/components/RateHistory";
 import { convertAmount } from "@/utils/calculateConvertions";
 import { convertionStore } from "@/store/convertions";
-import { Platform, RefreshControl, Modal, Pressable, View } from "react-native";
+import { Platform, RefreshControl, Modal, Pressable, View, useWindowDimensions, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { TrendingUp } from "@/components/icons/TrendingUp";
@@ -30,6 +30,10 @@ export default function Index() {
   );
   const [isPolicyVisible, setIsPolicyVisible] = useState(false);
   const [selectedCurrencyId, setSelectedCurrencyId] = useState<number>(0);
+  const [isHistoryModalVisible, setIsHistoryModalVisible] = useState(false);
+  
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === "web" && width >= 768;
   
   const convertions = convertionStore((state) => state.convertions);
   
@@ -181,123 +185,159 @@ export default function Index() {
         ]}
       >
         <Div
-          style={{
-            flex: 1,
-            justifyContent: "center",
-            alignItems: "center",
-            width: "100%",
-            alignSelf: "center",
-            maxWidth: 400,
-          }}
-        >
-          <Div
-            style={{
-              gap: 10,
+          style={[
+            {
+              flex: 1,
+              justifyContent: "center",
+              alignItems: "center",
               width: "100%",
-              paddingVertical: 15,
-              paddingHorizontal: 40,
-            }}
-          >
+              alignSelf: "center",
+              maxWidth: 400,
+            },
+            isDesktop && ({
+              flexDirection: "row",
+              maxWidth: 840,
+              alignItems: "flex-start",
+              gap: 40,
+              paddingVertical: 20,
+            } as any),
+          ]}
+        >
+          {/* Left Block: Calculator Card */}
+          <View style={{ width: isDesktop ? 400 : "100%" }}>
             <Div
               style={{
+                gap: 10,
                 width: "100%",
-                marginBottom: 20,
+                paddingVertical: 15,
+                paddingHorizontal: isDesktop ? 0 : 40,
               }}
             >
               <Div
                 style={{
-                  display: "flex",
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 10,
-                  marginBottom: 5,
+                  width: "100%",
+                  marginBottom: 20,
                 }}
               >
-                <TrendingUp width={24} height={24} color={iconColor} />
-                <Typography
-                  type="title"
+                <Div
                   style={{
-                    textAlignVertical: "center",
                     display: "flex",
-                    alignItems: "center",
-                  }}
-                >
-                  Cambio rápido
-                </Typography>
-              </Div>
-              <Div
-                style={{
-                  display: "flex",
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Typography
-                  type="md"
-                  style={{
-                    textAlignVertical: "center",
-                    display: "flex",
+                    flexDirection: "row",
                     alignItems: "center",
                     justifyContent: "center",
-                    color: textSecondaryColor,
+                    gap: 10,
+                    marginBottom: 5,
                   }}
                 >
-                  Bolívares{" "}
-                  <ArrowRight
-                    width={16}
-                    height={16}
-                    color={textSecondaryColor}
-                    style={{ transform: [{ translateY: 3 }] }}
-                  />{" "}
-                  Dólares
-                </Typography>
+                  <TrendingUp width={24} height={24} color={iconColor} />
+                  <Typography
+                    type="title"
+                    style={{
+                      textAlignVertical: "center",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    Cambio rápido
+                  </Typography>
+                </Div>
+                <Div
+                  style={{
+                    display: "flex",
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Typography
+                    type="md"
+                    style={{
+                      textAlignVertical: "center",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: textSecondaryColor,
+                    }}
+                  >
+                    Bolívares{" "}
+                    <ArrowRight
+                      width={16}
+                      height={16}
+                      color={textSecondaryColor}
+                      style={{ transform: [{ translateY: 3 }] }}
+                    />{" "}
+                    Dólares
+                  </Typography>
+                </Div>
               </Div>
+              <Currency
+                value={bs}
+                onChangeValue={handleBsChange}
+                onFocus={resetInputs}
+                label="Bolívares"
+              />
+              <ArrowDownUp
+                width={20}
+                height={20}
+                color={iconColor}
+                style={{ alignSelf: "center", marginTop: 10 }}
+              />
+              <Currency
+                suffix="$"
+                value={usd}
+                onChangeValue={handleUsdChange}
+                onFocus={resetInputs}
+                label="Dólares"
+              />
             </Div>
-            <Currency
-              value={bs}
-              onChangeValue={handleBsChange}
-              onFocus={resetInputs}
-              label="Bolívares"
-            />
-            <ArrowDownUp
-              width={20}
-              height={20}
-              color={iconColor}
-              style={{ alignSelf: "center", marginTop: 10 }}
-            />
-            <Currency
-              suffix="$"
-              value={usd}
-              onChangeValue={handleUsdChange}
-              onFocus={resetInputs}
-              label="Dólares"
-            />
-          </Div>
 
-          <Div
-            style={{
-              gap: 10,
-              width: "100%",
-              paddingVertical: 10,
-              paddingHorizontal: 40,
-              justifyContent: "center",
-            }}
-          >
-            <ConvertionDisplay
-              convertions={convertions}
-              setRate={setRate}
-              selectedId={selectedCurrencyId}
-              setSelectedId={setSelectedCurrencyId}
-            />
-            {selectedCurrencyId > 0 && (
+            <Div
+              style={{
+                gap: 10,
+                width: "100%",
+                paddingVertical: 10,
+                paddingHorizontal: isDesktop ? 0 : 40,
+                justifyContent: "center",
+              }}
+            >
+              <ConvertionDisplay
+                convertions={convertions}
+                setRate={setRate}
+                selectedId={selectedCurrencyId}
+                setSelectedId={setSelectedCurrencyId}
+              />
+              {!isDesktop && selectedCurrencyId > 0 && (
+                <TouchableOpacity
+                  onPress={() => setIsHistoryModalVisible(true)}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: borderColor,
+                    borderRadius: 10,
+                    paddingVertical: 12,
+                    width: "100%",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: bgColor,
+                    marginTop: 15,
+                  }}
+                >
+                  <Typography type="defaultSemiBold" style={{ color: iconColor }}>
+                    📊 Ver tendencia y fluctuación
+                  </Typography>
+                </TouchableOpacity>
+              )}
+            </Div>
+          </View>
+
+          {/* Right Block: Rates Fluctuations History (Desktop only) */}
+          {isDesktop && selectedCurrencyId > 0 && (
+            <View style={{ width: 400, marginTop: 15 }}>
               <RateHistory
                 currencyId={selectedCurrencyId}
                 currencyName={activeCurrencyName}
               />
-            )}
-          </Div>
+            </View>
+          )}
         </Div>
         <Div
           style={{
@@ -381,6 +421,49 @@ export default function Index() {
             <Typography type="md" style={{ color: textSecondaryColor, marginBottom: 40, fontSize: 14, lineHeight: 22 }}>
               La aplicación NO recopila, almacena, comparte ni transmite ningún tipo de información personal, financiera o de identificación del usuario. Funciona únicamente como un agregador de información pública.
             </Typography>
+          </ScrollDiv>
+        </SafeAreaView>
+      </Modal>
+
+      <Modal
+        visible={isHistoryModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setIsHistoryModalVisible(false)}
+      >
+        <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }} edges={['top', 'bottom']}>
+          <Div 
+            style={{ 
+              flexDirection: "row", 
+              alignItems: "center", 
+              paddingHorizontal: 24, 
+              paddingVertical: 16,
+              borderBottomWidth: 1,
+              borderBottomColor: borderColor
+            }}
+          >
+            <Typography type="subtitle" style={{ flex: 1, fontSize: 18 }}>
+              Tendencia de Tasa
+            </Typography>
+            <Pressable 
+              onPress={() => setIsHistoryModalVisible(false)} 
+              style={{ 
+                padding: 6,
+                backgroundColor: borderColor, 
+                borderRadius: 20 
+              }}
+            >
+              <X width={20} height={20} color={textSecondaryColor} />
+            </Pressable>
+          </Div>
+          
+          <ScrollDiv style={{ paddingHorizontal: 24, paddingVertical: 20 }}>
+            {selectedCurrencyId > 0 && (
+              <RateHistory
+                currencyId={selectedCurrencyId}
+                currencyName={activeCurrencyName}
+              />
+            )}
           </ScrollDiv>
         </SafeAreaView>
       </Modal>
