@@ -8,6 +8,7 @@ import {
   Platform,
   LayoutAnimation,
   UIManager,
+  useWindowDimensions,
 } from "react-native";
 import Svg, { Path, Defs, LinearGradient, Stop, Circle } from "react-native-svg";
 import { useThemeColor } from "@/hooks/useThemeColor";
@@ -61,6 +62,9 @@ export function RateHistory({ currencyId, currencyName }: RateHistoryProps) {
     "icon",
     "backgroundFocus"
   );
+
+  const { width: screenWidth } = useWindowDimensions();
+  const isDesktop = Platform.OS === "web" && screenWidth >= 768;
 
   const [days, setDays] = useState<7 | 15 | 30>(7);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -295,7 +299,14 @@ export function RateHistory({ currencyId, currencyName }: RateHistoryProps) {
           )}
 
           {/* SVG Line Chart Canvas */}
-          <View style={styles.chartWrapper}>
+          <View
+            style={[
+              styles.chartWrapper,
+              isDesktop
+                ? { width: 440, marginLeft: -24 }
+                : { width: screenWidth, marginLeft: -24 }
+            ]}
+          >
             <Svg viewBox="0 0 300 150" width="100%" height={150}>
               <Defs>
                 {charts.map((c) => (
