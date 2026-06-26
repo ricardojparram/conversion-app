@@ -52,12 +52,14 @@ export function RateHistory({ currencyId, currencyName }: RateHistoryProps) {
     bgColor,
     borderColor,
     iconColor,
+    bgFocusColor,
   ] = useThemeColor(
     "text",
     "textSecondary",
     "backgroundSecondary",
     "border",
-    "icon"
+    "icon",
+    "backgroundFocus"
   );
 
   const [days, setDays] = useState<7 | 15 | 30>(7);
@@ -213,8 +215,8 @@ export function RateHistory({ currencyId, currencyName }: RateHistoryProps) {
                 style={[
                   styles.sourceCard,
                   {
-                    backgroundColor: isSelected ? iconColor : bgColor,
-                    borderColor: isSelected ? "#037c2f" : borderColor,
+                    backgroundColor: isSelected ? bgFocusColor : bgColor,
+                    borderColor: isSelected ? sourceColor : borderColor,
                     borderWidth: isSelected ? 2 : 1,
                   },
                 ]}
@@ -224,14 +226,15 @@ export function RateHistory({ currencyId, currencyName }: RateHistoryProps) {
                     width: 8,
                     height: 8,
                     borderRadius: 4,
-                    backgroundColor: isSelected ? "white" : sourceColor,
+                    backgroundColor: sourceColor,
                     marginRight: 6,
+                    opacity: isSelected ? 1 : 0.4,
                   }}
                 />
                 <Typography
                   type="defaultSemiBold"
                   style={{
-                    color: isSelected ? "white" : textSecondaryColor,
+                    color: isSelected ? textColor : textSecondaryColor,
                     fontSize: 12,
                   }}
                 >
