@@ -82,21 +82,31 @@ export async function syncAndCacheHistory(currencyId: number, limit: number = 30
         .eq('currency_id', currencyId)
         .gte('date', `${dateStr}T00:00:00`)
         .lte('date', `${dateStr}T23:59:59`)
-        .order('rate', { ascending: false })
-        .limit(1)
+        .order('date', { ascending: false })
+        .then(r => {
+          if (r.error) {
+            console.error('[syncAndCacheHistory] Supabase query error:', r.error);
+            return null;
+          }
+          if (!r.data || r.data.length === 0) {
+            return null;
+          }
+          const sum = r.data.reduce((acc, row) => acc + row.rate, 0);
+          const avg = sum / r.data.length;
+          const latest = r.data[0];
+          return {
+            rate: avg,
+            date: latest.date,
+            rate_old: latest.rate_old,
+            date_old: latest.date_old
+          };
+        })
     );
   }
 
   try {
     const results = await Promise.all(promises);
-    const data = results
-      .map(r => {
-        if (r.error) {
-          console.error('[syncAndCacheHistory] Supabase query error:', r.error);
-        }
-        return r.data && r.data[0];
-      })
-      .filter((x): x is { rate: number; date: string; rate_old: number | null; date_old: string | null } => x !== null && x !== undefined);
+    const data = results.filter((x): x is { rate: number; date: string; rate_old: number | null; date_old: string | null } => x !== null && x !== undefined);
 
     if (data.length === 0) {
       return [];
