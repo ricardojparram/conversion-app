@@ -62,7 +62,7 @@ export const convertionStore = create<ConversionStore>()((set, get) => ({
 
     // 2. Sync fresh history from Supabase directly
     try {
-      const freshHistory = await syncAndCacheHistory(currencyId);
+      const freshHistory = await syncAndCacheHistory(currencyId, 30);
       // Take last "days" points to fit filters
       const filteredHistory = freshHistory.slice(-days);
       set((state) => ({

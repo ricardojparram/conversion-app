@@ -62,12 +62,13 @@ export async function getLatestRates(): Promise<Convertion[]> {
   );
 }
 
-export async function syncAndCacheHistory(currencyId: number): Promise<{ rate: number; date: string }[]> {
+export async function syncAndCacheHistory(currencyId: number, limit: number = 30): Promise<{ rate: number; date: string }[]> {
   const { data, error } = await supabase
     .from('exchange_rates')
     .select('rate, date, rate_old, date_old')
     .eq('currency_id', currencyId)
-    .order('date', { ascending: true });
+    .order('date', { ascending: false })
+    .limit(limit);
 
   if (error) {
     console.error('[syncAndCacheHistory] Supabase error:', error);
@@ -78,9 +79,11 @@ export async function syncAndCacheHistory(currencyId: number): Promise<{ rate: n
     return [];
   }
 
+  const chronologicalData = [...data].reverse();
+
   if (Platform.OS === 'web') {
     try {
-      localStorage.setItem(`cached_history_${currencyId}`, JSON.stringify(data));
+      localStorage.setItem(`cached_history_${currencyId}`, JSON.stringify(chronologicalData));
     } catch (e) {
       console.error('[syncAndCacheHistory] localStorage error:', e);
     }
@@ -97,7 +100,7 @@ export async function syncAndCacheHistory(currencyId: number): Promise<{ rate: n
          VALUES ($code, $currencyId, $currencyName, $source, $rate, $date, $rateOld, $dateOld, $symbol)`
       );
       try {
-        for (const row of data) {
+        for (const row of chronologicalData) {
           await statement.executeAsync({
             $code: meta.code,
             $currencyId: currencyId,
@@ -116,7 +119,7 @@ export async function syncAndCacheHistory(currencyId: number): Promise<{ rate: n
     }
   }
 
-  return data.map(r => ({ rate: r.rate, date: r.date }));
+  return chronologicalData.map(r => ({ rate: r.rate, date: r.date }));
 }
 
 export async function getLocalRateHistory(
