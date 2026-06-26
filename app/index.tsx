@@ -101,9 +101,13 @@ export default function Index() {
   useEffect(() => {
     if (convertions[0]) {
       const fechaCaracas = getCaracasDate();
-      const fechaFija = getCaracasDate(convertions[0].date);
-      if (fechaCaracas < fechaFija) {
-        setRate(convertions[0].rate_old);
+      if (convertions[0].date_old) {
+        const fechaOld = getCaracasDate(convertions[0].date_old);
+        if (fechaCaracas.getTime() <= fechaOld.getTime()) {
+          setRate(convertions[0].rate_old);
+        } else {
+          setRate(convertions[0].rate);
+        }
       } else {
         setRate(convertions[0].rate);
       }

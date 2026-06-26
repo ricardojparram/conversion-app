@@ -85,10 +85,10 @@ export const ConvertionDisplay = ({
 
             let rate = row.rate;
             let date = row.date;
-            if (row.source === "BCV") {
+            if (row.source === "BCV" && row.date_old) {
               const fechaCaracas = getCaracasDate();
-              const fechaFija = getCaracasDate(row.date);
-              if (fechaCaracas < fechaFija) {
+              const fechaOld = getCaracasDate(row.date_old);
+              if (fechaCaracas.getTime() <= fechaOld.getTime()) {
                 rate = row.rate_old;
                 date = row.date_old;
               }
