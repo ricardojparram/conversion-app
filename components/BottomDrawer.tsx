@@ -114,21 +114,10 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
   // PanResponder to track swipe down gestures on the handle / header area
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-      onStartShouldSetPanResponderCapture: () => false,
+      onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        // Trigger responder if swiping down, scroll is at the top, and vertical drag exceeds horizontal drag
-        const isSwipingDown = gestureState.dy > 5;
-        const isScrollAtTop = scrollY.current <= 0;
-        const isVerticalMove = Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
-        return isSwipingDown && isScrollAtTop && isVerticalMove;
-      },
-      onMoveShouldSetPanResponderCapture: (_, gestureState) => {
-        // Capture swipe gestures from inner ScrollView when scroll is at top
-        const isSwipingDown = gestureState.dy > 5;
-        const isScrollAtTop = scrollY.current <= 0;
-        const isVerticalMove = Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
-        return isSwipingDown && isScrollAtTop && isVerticalMove;
+        // Trigger responder if swiping down significantly
+        return gestureState.dy > 5;
       },
       onPanResponderMove: (_, gestureState) => {
         if (gestureState.dy > 0) {
@@ -209,7 +198,6 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
         ) : (
           /* Mobile Layout: Bottom Sheet Drawer (Draggable) */
           <Animated.View
-            {...panResponder.panHandlers}
             style={[
               styles.mobileDrawer,
               {
@@ -222,7 +210,7 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
             ]}
           >
             {/* Drag Handle & Header (Gesture Responder area) */}
-            <View style={styles.gestureHeader}>
+            <View {...panResponder.panHandlers} style={styles.gestureHeader}>
               <View style={[styles.dragHandle, { backgroundColor: borderColor }]} />
               <Typography
                 type="subtitle"
