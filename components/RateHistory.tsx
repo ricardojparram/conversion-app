@@ -377,27 +377,24 @@ export function RateHistory({ currencyId, currencyName }: RateHistoryProps) {
                       flexDirection: "row",
                       justifyContent: "space-between",
                       alignItems: "center",
-                      paddingVertical: 10,
+                      paddingVertical: 12,
                       borderBottomWidth: 1,
                       borderBottomColor: borderColor,
                     }}
                   >
-                    <View style={{ flexDirection: "row", alignItems: "center", flex: 1.5 }}>
-                      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: c.color, marginRight: 8 }} />
-                      <Typography type="defaultSemiBold" style={{ fontSize: 13, color: textColor }}>
-                        {c.currencyName.replace("Dólar ", "")}
+                    <View style={{ flex: 1, justifyContent: "center", paddingRight: 8 }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 4 }}>
+                        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: c.color, marginRight: 8 }} />
+                        <Typography type="defaultSemiBold" style={{ fontSize: 14, color: textColor }}>
+                          {c.currencyName.replace("Dólar ", "")}
+                        </Typography>
+                      </View>
+                      <Typography type="md" style={{ color: textSecondaryColor, fontSize: 11, marginLeft: 16 }}>
+                        Mín: {formatCurrency(Math.min(...rates) || 0, "Bs")}  •  Máx: {formatCurrency(Math.max(...rates) || 0, "Bs")}
                       </Typography>
                     </View>
-                    <View style={{ flex: 1, alignItems: "center" }}>
-                      <Typography type="md" style={{ color: textSecondaryColor, fontSize: 11 }}>
-                        Mín / Máx
-                      </Typography>
-                      <Typography type="md" style={{ color: textColor, fontSize: 11, marginTop: 2 }}>
-                        {formatCurrency(Math.min(...rates) || 0, "Bs")} - {formatCurrency(Math.max(...rates) || 0, "Bs")}
-                      </Typography>
-                    </View>
-                    <View style={{ flex: 1.2, alignItems: "flex-end" }}>
-                      <Typography type="defaultSemiBold" style={{ color: textColor, fontSize: 13 }}>
+                    <View style={{ alignItems: "flex-end", justifyContent: "center" }}>
+                      <Typography type="defaultSemiBold" style={{ color: textColor, fontSize: 14 }}>
                         {formatCurrency(latest, "Bs")}
                       </Typography>
                       <Text style={{ color: trendCol, fontSize: 11, fontFamily: "Poppins_600SemiBold", marginTop: 2 }}>
