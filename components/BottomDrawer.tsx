@@ -115,8 +115,16 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
+      onStartShouldSetPanResponderCapture: () => false,
       onMoveShouldSetPanResponder: (_, gestureState) => {
         // Trigger responder if swiping down, scroll is at the top, and vertical drag exceeds horizontal drag
+        const isSwipingDown = gestureState.dy > 5;
+        const isScrollAtTop = scrollY.current <= 0;
+        const isVerticalMove = Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
+        return isSwipingDown && isScrollAtTop && isVerticalMove;
+      },
+      onMoveShouldSetPanResponderCapture: (_, gestureState) => {
+        // Capture swipe gestures from inner ScrollView when scroll is at top
         const isSwipingDown = gestureState.dy > 5;
         const isScrollAtTop = scrollY.current <= 0;
         const isVerticalMove = Math.abs(gestureState.dy) > Math.abs(gestureState.dx);
