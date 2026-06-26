@@ -187,10 +187,14 @@ export function Currency({
             onLongPress={() => setTooltip(true)}
             activeOpacity={0.7}
           >
-            <View style={{ position: "relative" }} pointerEvents="none">
+            <View
+              style={{ position: "relative" }}
+              pointerEvents={Platform.OS === "web" ? "auto" : "none"}
+            >
               {/* Suffix label (Bs / $) */}
               <Typography
                 type="subtitle"
+                pointerEvents="none"
                 style={{
                   position: "absolute",
                   left: 14,
@@ -212,7 +216,7 @@ export function Currency({
                 selection={selection}
                 keyboardType="number-pad"
                 caretHidden={true}
-                contextMenuHidden={true}
+                contextMenuHidden={Platform.OS === "web" ? false : true}
                 autoCorrect={false}
                 autoComplete="off"
                 onFocus={(e) => {
