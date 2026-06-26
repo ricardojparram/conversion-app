@@ -179,14 +179,15 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
               <Pressable
                 onPress={handleClose}
                 style={{
-                  padding: 6,
+                  width: 28,
+                  height: 28,
+                  borderRadius: 14,
                   backgroundColor: borderColor,
-                  borderRadius: 20,
                   justifyContent: "center",
                   alignItems: "center",
                 }}
               >
-                <Typography type="md" style={{ color: textSecondaryColor, fontSize: 14, fontFamily: "Poppins_600SemiBold" }}>✕</Typography>
+                <Typography type="md" style={{ color: textSecondaryColor, fontSize: 12, fontFamily: "Poppins_600SemiBold", textAlign: "center" }}>✕</Typography>
               </Pressable>
             </View>
             <View style={[styles.content, { flex: 1 }]}>
