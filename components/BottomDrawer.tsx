@@ -204,8 +204,8 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
                 backgroundColor: bgColor,
                 transform: [{ translateY }],
                 paddingBottom: Math.max(insets.bottom, 24),
-                minHeight: screenHeight * 0.8,
-                maxHeight: screenHeight * 0.9,
+                minHeight: screenHeight * 0.85,
+                maxHeight: screenHeight * 0.95,
               },
             ]}
           >

@@ -82,7 +82,7 @@ export async function syncAndCacheHistory(currencyId: number, limit: number = 30
         .eq('currency_id', currencyId)
         .gte('date', `${dateStr}T00:00:00`)
         .lte('date', `${dateStr}T23:59:59`)
-        .order('date', { ascending: false })
+        .order('rate', { ascending: false })
         .limit(1)
     );
   }
