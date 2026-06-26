@@ -131,7 +131,7 @@ export function RateHistory({ currencyId, currencyName }: RateHistoryProps) {
   const trendColor = isPositive ? "#16a249" : "#ea4335";
 
   return (
-    <View style={[styles.container, { backgroundColor: bgColor, borderColor }]}>
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <View style={{ flex: 1, paddingRight: 8 }}>
@@ -316,10 +316,7 @@ export function RateHistory({ currencyId, currencyName }: RateHistoryProps) {
 const styles = StyleSheet.create({
   container: {
     width: "100%",
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 16,
-    marginTop: 15,
+    paddingVertical: 10,
   },
   header: {
     flexDirection: "row",

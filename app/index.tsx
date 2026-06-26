@@ -8,7 +8,7 @@ import { RateHistory } from "@/components/RateHistory";
 import { BottomDrawer } from "@/components/BottomDrawer";
 import { convertAmount } from "@/utils/calculateConvertions";
 import { convertionStore } from "@/store/convertions";
-import { Platform, RefreshControl, Modal, Pressable, View, useWindowDimensions, TouchableOpacity, StyleSheet } from "react-native";
+import { Platform, RefreshControl, Modal, Pressable, View, useWindowDimensions, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { TrendingUp } from "@/components/icons/TrendingUp";
@@ -372,7 +372,7 @@ export default function Index() {
         onClose={() => setIsPolicyVisible(false)}
         title="Términos y Privacidad"
       >
-        <ScrollDiv style={{ paddingVertical: 10, maxHeight: 500 }}>
+        <ScrollView style={{ flexShrink: 1, maxHeight: 500 }} contentContainerStyle={{ paddingVertical: 10 }} showsVerticalScrollIndicator={false}>
           <Typography type="subtitle" style={{ marginBottom: 10, fontSize: 16 }}>
             1. Descargo de Responsabilidad
           </Typography>
@@ -389,7 +389,7 @@ export default function Index() {
           <Typography type="md" style={{ color: textSecondaryColor, marginBottom: 40, fontSize: 14, lineHeight: 22 }}>
             La aplicación NO recopila, almacena, comparte ni transmite ningún tipo de información personal, financiera o de identificación del usuario. Funciona únicamente como un agregador de información pública.
           </Typography>
-        </ScrollDiv>
+        </ScrollView>
       </BottomDrawer>
 
       <BottomDrawer
@@ -397,14 +397,14 @@ export default function Index() {
         onClose={() => setIsHistoryModalVisible(false)}
         title="Tendencia de Tasa"
       >
-        <ScrollDiv style={{ paddingVertical: 10, maxHeight: 520 }}>
+        <ScrollView style={{ flexShrink: 1, maxHeight: 520 }} contentContainerStyle={{ paddingVertical: 10 }} showsVerticalScrollIndicator={false}>
           {selectedCurrencyId > 0 && (
             <RateHistory
               currencyId={selectedCurrencyId}
               currencyName={activeCurrencyName}
             />
           )}
-        </ScrollDiv>
+        </ScrollView>
       </BottomDrawer>
     </ScrollDiv>
   );

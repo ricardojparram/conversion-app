@@ -9,7 +9,7 @@ import {
   Pressable,
   Platform,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { Typography } from "@/components/Typography";
 
@@ -23,6 +23,7 @@ interface BottomDrawerProps {
 export function BottomDrawer({ visible, onClose, title, children }: BottomDrawerProps) {
   const { height: screenHeight, width: screenWidth } = useWindowDimensions();
   const isDesktop = Platform.OS === "web" && screenWidth >= 768;
+  const insets = useSafeAreaInsets();
 
   const [
     bgColor,
@@ -191,6 +192,7 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
               {
                 backgroundColor: bgSecondaryColor,
                 transform: [{ translateY }],
+                paddingBottom: Math.max(insets.bottom, 24),
               },
             ]}
           >
@@ -210,9 +212,9 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
                 {title}
               </Typography>
             </View>
-            <SafeAreaView style={styles.content} edges={["bottom"]}>
+            <View style={styles.content}>
               {children}
-            </SafeAreaView>
+            </View>
           </Animated.View>
         )}
       </View>
@@ -244,14 +246,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 10,
     elevation: 5,
+    flexShrink: 1,
   },
   mobileDrawer: {
     width: "100%",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 24,
-    paddingBottom: 30,
     maxHeight: "88%",
+    flexShrink: 1,
   },
   gestureHeader: {
     paddingVertical: 14,
@@ -271,5 +274,6 @@ const styles = StyleSheet.create({
   },
   content: {
     width: "100%",
+    flexShrink: 1,
   },
 });
