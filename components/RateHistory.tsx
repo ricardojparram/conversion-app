@@ -120,7 +120,7 @@ export function RateHistory({ currencyId, currencyName }: RateHistoryProps) {
 
     const mappedCharts = selectedHistories.map((sh) => {
       const mappedPoints = sh.data.map((d, index) => {
-        const x = sh.data.length > 1 ? (index / (sh.data.length - 1)) * 300 : 150;
+        const x = sh.data.length > 1 ? 10 + (index / (sh.data.length - 1)) * 280 : 150;
         // 110 px chart height space, 20 px padding
         const y = 150 - ((d.rate - minVal) / valRange) * 110 - 20;
         return { x, y, rate: d.rate, date: d.date };
@@ -522,7 +522,7 @@ const styles = StyleSheet.create({
   },
   chartWrapper: {
     height: 150,
-    width: "100%",
+    marginHorizontal: -24,
     marginBottom: 10,
   },
   collapseHeader: {
