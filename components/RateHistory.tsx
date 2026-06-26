@@ -170,14 +170,9 @@ export function RateHistory({ currencyId, currencyName }: RateHistoryProps) {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <View style={{ flex: 1, paddingRight: 8 }}>
-          <Typography type="defaultSemiBold" style={{ color: textColor }}>
-            Historial de Tasas
-          </Typography>
-          <Typography type="md" style={{ color: textSecondaryColor, marginTop: 2 }}>
-            {isSingleMode && singleChart ? singleChart.currencyName : "Comparativa de Tasas"} (Últimos {days} días)
-          </Typography>
-        </View>
+        <Typography type="defaultSemiBold" style={{ color: textColor, fontSize: 16 }}>
+          {isSingleMode && singleChart ? singleChart.currencyName.replace("Dólar ", "") : "Comparar"}
+        </Typography>
 
         {/* Range Selectors */}
         <View style={[styles.tabs, { borderColor }]}>
@@ -195,6 +190,7 @@ export function RateHistory({ currencyId, currencyName }: RateHistoryProps) {
                 style={{
                   color: days === r ? "white" : textSecondaryColor,
                   fontFamily: "Poppins_600SemiBold",
+                  fontSize: 12,
                 }}
               >
                 {r}D
@@ -204,12 +200,9 @@ export function RateHistory({ currencyId, currencyName }: RateHistoryProps) {
         </View>
       </View>
 
-      {/* Source Selector (Chips) */}
+      {/* Source Selector (Grid) */}
       <View style={{ marginBottom: 20 }}>
-        <Typography type="md" style={{ color: textSecondaryColor, marginBottom: 8, fontSize: 13, fontFamily: "Poppins_600SemiBold" }}>
-          Selecciona fuentes para comparar:
-        </Typography>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", rowGap: 10, columnGap: "4%" }}>
           {convertions.map((row) => {
             const isSelected = selectedSources.includes(row.currency_id);
             const sourceColor = getSourceColor(row.currency_name);
@@ -218,10 +211,10 @@ export function RateHistory({ currencyId, currencyName }: RateHistoryProps) {
                 key={row.currency_id}
                 onPress={() => toggleSource(row.currency_id)}
                 style={[
-                  styles.sourcePill,
+                  styles.sourceCard,
                   {
-                    borderColor: isSelected ? sourceColor : borderColor,
-                    backgroundColor: isSelected ? `${sourceColor}15` : "transparent",
+                    backgroundColor: isSelected ? iconColor : bgColor,
+                    borderColor: isSelected ? "#037c2f" : borderColor,
                     borderWidth: isSelected ? 2 : 1,
                   },
                 ]}
@@ -231,17 +224,15 @@ export function RateHistory({ currencyId, currencyName }: RateHistoryProps) {
                     width: 8,
                     height: 8,
                     borderRadius: 4,
-                    backgroundColor: sourceColor,
+                    backgroundColor: isSelected ? "white" : sourceColor,
                     marginRight: 6,
-                    opacity: isSelected ? 1 : 0.4,
                   }}
                 />
                 <Typography
-                  type="md"
+                  type="defaultSemiBold"
                   style={{
-                    color: isSelected ? textColor : textSecondaryColor,
-                    fontFamily: isSelected ? "Poppins_600SemiBold" : "Poppins_400Regular",
-                    fontSize: 13,
+                    color: isSelected ? "white" : textSecondaryColor,
+                    fontSize: 12,
                   }}
                 >
                   {row.currency_name.replace("Dólar ", "")}
@@ -493,13 +484,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  sourcePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+  sourceCard: {
+    width: "48%",
+    borderRadius: 10,
     borderWidth: 1,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 8,
   },
   loadingContainer: {
     height: 150,
