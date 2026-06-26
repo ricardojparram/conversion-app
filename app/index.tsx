@@ -7,7 +7,7 @@ import { ConvertionDisplay } from "@/components/Convertions";
 import { RateHistory } from "@/components/RateHistory";
 import { convertAmount } from "@/utils/calculateConvertions";
 import { convertionStore } from "@/store/convertions";
-import { Platform, RefreshControl, Modal, Pressable, View, useWindowDimensions, TouchableOpacity } from "react-native";
+import { Platform, RefreshControl, Modal, Pressable, View, useWindowDimensions, TouchableOpacity, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { TrendingUp } from "@/components/icons/TrendingUp";
@@ -19,8 +19,21 @@ import { getCaracasDate } from "@/utils/getCaracasDate";
 import { Tag } from "@/components/Tag";
 
 export default function Index() {
-  const [iconColor, bgColor, textSecondaryColor, textPrimaryColor, borderColor] =
-    useThemeColor("icon", "background", "textSecondary", "text", "border");
+  const [
+    iconColor,
+    bgColor,
+    textSecondaryColor,
+    textPrimaryColor,
+    borderColor,
+    bgSecondaryColor,
+  ] = useThemeColor(
+    "icon",
+    "background",
+    "textSecondary",
+    "text",
+    "border",
+    "backgroundSecondary"
+  );
   const [bs, setBs] = useState<number | null>(0);
   const [usd, setUSD] = useState<number | null>(0);
   const [refreshing, setRefreshing] = useState(false);
@@ -185,32 +198,23 @@ export default function Index() {
         ]}
       >
         <Div
-          style={[
-            {
-              flex: 1,
-              justifyContent: "center",
-              alignItems: "center",
-              width: "100%",
-              alignSelf: "center",
-              maxWidth: 400,
-            },
-            isDesktop && ({
-              flexDirection: "row",
-              maxWidth: 840,
-              alignItems: "flex-start",
-              gap: 40,
-              paddingVertical: 20,
-            } as any),
-          ]}
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            width: "100%",
+            alignSelf: "center",
+            maxWidth: 400,
+          }}
         >
           {/* Left Block: Calculator Card */}
-          <View style={{ width: isDesktop ? 400 : "100%" }}>
+          <View style={{ width: "100%" }}>
             <Div
               style={{
                 gap: 10,
                 width: "100%",
                 paddingVertical: 15,
-                paddingHorizontal: isDesktop ? 0 : 40,
+                paddingHorizontal: 40,
               }}
             >
               <Div
@@ -296,7 +300,7 @@ export default function Index() {
                 gap: 10,
                 width: "100%",
                 paddingVertical: 10,
-                paddingHorizontal: isDesktop ? 0 : 40,
+                paddingHorizontal: 40,
                 justifyContent: "center",
               }}
             >
@@ -306,7 +310,7 @@ export default function Index() {
                 selectedId={selectedCurrencyId}
                 setSelectedId={setSelectedCurrencyId}
               />
-              {!isDesktop && selectedCurrencyId > 0 && (
+              {selectedCurrencyId > 0 && (
                 <TouchableOpacity
                   onPress={() => setIsHistoryModalVisible(true)}
                   style={{
@@ -317,7 +321,7 @@ export default function Index() {
                     width: "100%",
                     alignItems: "center",
                     justifyContent: "center",
-                    backgroundColor: bgColor,
+                    backgroundColor: bgSecondaryColor,
                     marginTop: 15,
                   }}
                 >
@@ -328,16 +332,6 @@ export default function Index() {
               )}
             </Div>
           </View>
-
-          {/* Right Block: Rates Fluctuations History (Desktop only) */}
-          {isDesktop && selectedCurrencyId > 0 && (
-            <View style={{ width: 400, marginTop: 15 }}>
-              <RateHistory
-                currencyId={selectedCurrencyId}
-                currencyName={activeCurrencyName}
-              />
-            </View>
-          )}
         </Div>
         <Div
           style={{
@@ -428,45 +422,120 @@ export default function Index() {
       <Modal
         visible={isHistoryModalVisible}
         animationType="slide"
-        presentationStyle="pageSheet"
+        transparent={true}
         onRequestClose={() => setIsHistoryModalVisible(false)}
       >
-        <SafeAreaView style={{ flex: 1, backgroundColor: bgColor }} edges={['top', 'bottom']}>
-          <Div 
-            style={{ 
-              flexDirection: "row", 
-              alignItems: "center", 
-              paddingHorizontal: 24, 
-              paddingVertical: 16,
-              borderBottomWidth: 1,
-              borderBottomColor: borderColor
-            }}
-          >
-            <Typography type="subtitle" style={{ flex: 1, fontSize: 18 }}>
-              Tendencia de Tasa
-            </Typography>
-            <Pressable 
-              onPress={() => setIsHistoryModalVisible(false)} 
-              style={{ 
-                padding: 6,
-                backgroundColor: borderColor, 
-                borderRadius: 20 
-              }}
+        <View style={[styles.modalOverlay, !isDesktop && styles.modalOverlayMobile]}>
+          {/* Backdrop Click Trigger */}
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setIsHistoryModalVisible(false)}
+          />
+
+          {isDesktop ? (
+            /* Desktop Layout: Centered Box with X close button */
+            <View style={[styles.desktopBox, { backgroundColor: bgSecondaryColor, borderColor }]}>
+              {/* Header */}
+              <View style={[styles.modalHeader, { borderBottomWidth: 1, borderBottomColor: borderColor }]}>
+                <Typography type="subtitle" style={{ flex: 1, fontSize: 18, color: textPrimaryColor }}>
+                  Tendencia de Tasa
+                </Typography>
+                <Pressable
+                  onPress={() => setIsHistoryModalVisible(false)}
+                  style={{
+                    padding: 6,
+                    backgroundColor: borderColor,
+                    borderRadius: 20
+                  }}
+                >
+                  <X width={20} height={20} color={textSecondaryColor} />
+                </Pressable>
+              </View>
+              {/* Chart Content */}
+              <ScrollDiv style={{ marginTop: 10 }}>
+                {selectedCurrencyId > 0 && (
+                  <RateHistory
+                    currencyId={selectedCurrencyId}
+                    currencyName={activeCurrencyName}
+                  />
+                )}
+              </ScrollDiv>
+            </View>
+          ) : (
+            /* Mobile Layout: Bottom Sheet Drawer (no X button, drag handle) */
+            <SafeAreaView
+              style={[styles.mobileDrawer, { backgroundColor: bgSecondaryColor }]}
+              edges={['bottom']}
             >
-              <X width={20} height={20} color={textSecondaryColor} />
-            </Pressable>
-          </Div>
-          
-          <ScrollDiv style={{ paddingHorizontal: 24, paddingVertical: 20 }}>
-            {selectedCurrencyId > 0 && (
-              <RateHistory
-                currencyId={selectedCurrencyId}
-                currencyName={activeCurrencyName}
-              />
-            )}
-          </ScrollDiv>
-        </SafeAreaView>
+              {/* Drag Handle */}
+              <View style={[styles.dragHandle, { backgroundColor: borderColor }]} />
+              
+              {/* Header */}
+              <View style={styles.modalHeader}>
+                <Typography type="subtitle" style={{ fontSize: 18, fontFamily: "Poppins_600SemiBold", color: textPrimaryColor }}>
+                  Tendencia de Tasa
+                </Typography>
+              </View>
+
+              {/* Chart Content */}
+              <ScrollDiv style={{ maxHeight: 520 }}>
+                {selectedCurrencyId > 0 && (
+                  <RateHistory
+                    currencyId={selectedCurrencyId}
+                    currencyName={activeCurrencyName}
+                  />
+                )}
+              </ScrollDiv>
+            </SafeAreaView>
+          )}
+        </View>
       </Modal>
     </ScrollDiv>
   );
 }
+
+const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+  },
+  modalOverlayMobile: {
+    justifyContent: "flex-end",
+  },
+  desktopBox: {
+    width: 440,
+    maxHeight: "85%",
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  mobileDrawer: {
+    width: "100%",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: 40,
+  },
+  dragHandle: {
+    width: 36,
+    height: 5,
+    borderRadius: 2.5,
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingBottom: 12,
+  },
+});
