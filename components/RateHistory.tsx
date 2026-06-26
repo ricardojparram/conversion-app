@@ -299,7 +299,7 @@ export function RateHistory({ currencyId, currencyName }: RateHistoryProps) {
 
           {/* SVG Line Chart Canvas */}
           <View style={styles.chartWrapper}>
-            <Svg viewBox="0 0 300 150" width="100%" height={150}>
+            <Svg viewBox="0 0 300 150" width="100%" height={150} preserveAspectRatio="none">
               <Defs>
                 {charts.map((c) => (
                   <LinearGradient key={`grad-${c.id}`} id={`grad-${c.id}`} x1="0" y1="0" x2="0" y2="1">
