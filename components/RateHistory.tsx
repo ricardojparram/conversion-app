@@ -8,6 +8,7 @@ import {
   Platform,
   LayoutAnimation,
   UIManager,
+  useWindowDimensions,
 } from "react-native";
 import Svg, { Path, Defs, LinearGradient, Stop, Circle } from "react-native-svg";
 import { useThemeColor } from "@/hooks/useThemeColor";
@@ -62,7 +63,8 @@ export function RateHistory({ currencyId, currencyName }: RateHistoryProps) {
     "backgroundFocus"
   );
 
-
+  const { width: screenWidth } = useWindowDimensions();
+  const isDesktop = Platform.OS === "web" && screenWidth >= 768;
 
   const [days, setDays] = useState<7 | 15 | 30>(7);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -122,7 +124,7 @@ export function RateHistory({ currencyId, currencyName }: RateHistoryProps) {
 
     const mappedCharts = selectedHistories.map((sh) => {
       const mappedPoints = sh.data.map((d, index) => {
-        const x = sh.data.length > 1 ? 10 + (index / (sh.data.length - 1)) * 280 : 150;
+        const x = sh.data.length > 1 ? 6 + (index / (sh.data.length - 1)) * 288 : 150;
         // 110 px chart height space, 20 px padding
         const y = 150 - ((d.rate - minVal) / valRange) * 110 - 20;
         return { x, y, rate: d.rate, date: d.date };
@@ -204,9 +206,9 @@ export function RateHistory({ currencyId, currencyName }: RateHistoryProps) {
         </View>
       </View>
 
-      {/* Source Selector (Grid) */}
+      {/* Source Selector (Filters Grid) */}
       <View style={{ marginBottom: 20 }}>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", rowGap: 10, columnGap: "4%" }}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
           {convertions.map((row) => {
             const isSelected = selectedSources.includes(row.currency_id);
             const sourceColor = getSourceColor(row.currency_name);
@@ -215,22 +217,21 @@ export function RateHistory({ currencyId, currencyName }: RateHistoryProps) {
                 key={row.currency_id}
                 onPress={() => toggleSource(row.currency_id)}
                 style={[
-                  styles.sourceCard,
+                  styles.sourceFilter,
                   {
-                    backgroundColor: isSelected ? bgFocusColor : bgColor,
                     borderColor: isSelected ? sourceColor : borderColor,
-                    borderWidth: isSelected ? 2 : 1,
+                    borderWidth: isSelected ? 1.5 : 1,
                   },
                 ]}
               >
                 <View
                   style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: 4,
+                    width: 6,
+                    height: 6,
+                    borderRadius: 3,
                     backgroundColor: sourceColor,
                     marginRight: 6,
-                    opacity: isSelected ? 1 : 0.4,
+                    opacity: isSelected ? 1 : 0.3,
                   }}
                 />
                 <Typography
@@ -489,15 +490,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  sourceCard: {
-    width: "48%",
-    borderRadius: 10,
-    borderWidth: 1,
+  sourceFilter: {
     flexDirection: "row",
-    justifyContent: "center",
     alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1,
+    backgroundColor: "transparent",
   },
   loadingContainer: {
     height: 150,
@@ -524,7 +524,6 @@ const styles = StyleSheet.create({
   },
   chartWrapper: {
     height: 150,
-    marginHorizontal: -24,
     marginBottom: 10,
   },
   collapseHeader: {
