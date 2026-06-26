@@ -6,7 +6,7 @@ import { Currency } from "@/components/Currency";
 import { ConvertionDisplay } from "@/components/Convertions";
 import { convertAmount } from "@/utils/calculateConvertions";
 import { convertionStore } from "@/store/convertions";
-import { Platform, RefreshControl, Modal, Pressable } from "react-native";
+import { Platform, RefreshControl, Modal, Pressable, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { TrendingUp } from "@/components/icons/TrendingUp";
@@ -139,17 +139,18 @@ export default function Index() {
         />
       }
     >
-      <Div
+      <View
         style={{
           position: "absolute",
-          bottom: -130,
-          insetInline: 0,
+          top: 80,
+          left: 0,
+          right: 0,
           zIndex: 99,
-          display: "flex",
           flexDirection: "row",
           justifyContent: "center",
           alignItems: "center",
         }}
+        pointerEvents="none"
       >
         {notification === "error" && (
           <Tag variant="error">Error al actualizar</Tag>
@@ -158,7 +159,7 @@ export default function Index() {
           <Tag variant="error">Sin conexión</Tag>
         )}
         {notification === "success" && <Tag variant="success">Actualizado</Tag>}
-      </Div>
+      </View>
       <Div
         style={[
           {
