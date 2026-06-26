@@ -23,14 +23,14 @@ export const ConvertionDisplay = ({
     "textSecondary",
     "backgroundSecondary",
     "border",
-    "icon"
+    "icon",
   );
   const [updatedAt, setUpdatedAt] = useState<string>(
-    formatDate(new Date().getTime())
+    formatDate(new Date().getTime()),
   );
   useEffect(() => {
     if (convertions.length > 0) {
-      const selected = convertions.find(c => c.currency_id === selectedId);
+      const selected = convertions.find((c) => c.currency_id === selectedId);
       if (selected) {
         setRate(+selected.rate);
         setUpdatedAt(formatDate(new Date(selected.date).getTime()));
@@ -108,6 +108,7 @@ export const ConvertionDisplay = ({
                   type="defaultSemiBold"
                   style={{
                     color: isActive ? "white" : textSecondaryColor,
+                    fontSize: 14,
                   }}
                 >
                   {row.currency_name}

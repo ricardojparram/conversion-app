@@ -8,10 +8,21 @@ import { RateHistory } from "@/components/RateHistory";
 import { BottomDrawer } from "@/components/BottomDrawer";
 import { convertAmount } from "@/utils/calculateConvertions";
 import { convertionStore } from "@/store/convertions";
-import { Platform, RefreshControl, Modal, Pressable, View, useWindowDimensions, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
+import {
+  Platform,
+  RefreshControl,
+  Modal,
+  Pressable,
+  View,
+  useWindowDimensions,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { TrendingUp } from "@/components/icons/TrendingUp";
+import { TrendingUpDown } from "@/components/icons/TrendingUpDown";
 import { ArrowRight } from "@/components/icons/ArrowRight";
 import { ArrowDownUp } from "@/components/icons/ArrowDownUp";
 import { Info } from "@/components/icons/Info";
@@ -33,25 +44,27 @@ export default function Index() {
     "textSecondary",
     "text",
     "border",
-    "backgroundSecondary"
+    "backgroundSecondary",
   );
   const [bs, setBs] = useState<number | null>(0);
   const [usd, setUSD] = useState<number | null>(0);
   const [refreshing, setRefreshing] = useState(false);
   const [lastEdited, setLastEdited] = useState<"bs" | "usd">("bs");
-  const [notification, setNotification] = useState<"success" | "error" | "offline" | null>(
-    null
-  );
+  const [notification, setNotification] = useState<
+    "success" | "error" | "offline" | null
+  >(null);
   const [isPolicyVisible, setIsPolicyVisible] = useState(false);
   const [selectedCurrencyId, setSelectedCurrencyId] = useState<number>(0);
   const [isHistoryModalVisible, setIsHistoryModalVisible] = useState(false);
-  
+
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === "web" && width >= 768;
-  
+
   const convertions = convertionStore((state) => state.convertions);
-  
-  const activeCurrency = convertions.find((c) => c.currency_id === selectedCurrencyId);
+
+  const activeCurrency = convertions.find(
+    (c) => c.currency_id === selectedCurrencyId,
+  );
   const activeCurrencyName = activeCurrency ? activeCurrency.currency_name : "";
 
   const fetchConvertions = convertionStore((state) => state.fetchConvertions);
@@ -180,9 +193,7 @@ export default function Index() {
         {notification === "error" && (
           <Tag variant="error">Error al actualizar</Tag>
         )}
-        {notification === "offline" && (
-          <Tag variant="error">Sin conexión</Tag>
-        )}
+        {notification === "offline" && <Tag variant="error">Sin conexión</Tag>}
         {notification === "success" && <Tag variant="success">Actualizado</Tag>}
       </View>
       <Div
@@ -191,11 +202,13 @@ export default function Index() {
             width: "100%",
             flex: 1,
           },
-          Platform.OS === "web" ? {
-            height: "100dvh",
-            justifyContent: "center",
-            alignItems: "center",
-          } as any : {},
+          Platform.OS === "web"
+            ? ({
+                height: "100dvh",
+                justifyContent: "center",
+                alignItems: "center",
+              } as any)
+            : {},
         ]}
       >
         <Div
@@ -318,16 +331,23 @@ export default function Index() {
                     borderWidth: 1,
                     borderColor: borderColor,
                     borderRadius: 10,
-                    paddingVertical: 12,
+                    paddingVertical: 10,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
                     width: "100%",
                     alignItems: "center",
                     justifyContent: "center",
                     backgroundColor: bgSecondaryColor,
-                    marginTop: 15,
+                    marginTop: 10,
                   }}
                 >
-                  <Typography type="defaultSemiBold" style={{ color: iconColor }}>
-                    📊 Ver tendencia y fluctuación
+                  <TrendingUpDown width={18} height={18} color={iconColor} />
+                  <Typography
+                    type="defaultSemiBold"
+                    style={{ color: textSecondaryColor }}
+                  >
+                    Ver tendencia y fluctuación
                   </Typography>
                 </TouchableOpacity>
               )}
@@ -343,7 +363,7 @@ export default function Index() {
             alignItems: "center",
           }}
         >
-          <Pressable 
+          <Pressable
             onPress={() => setIsPolicyVisible(true)}
             style={{
               flexDirection: "row",
@@ -372,22 +392,55 @@ export default function Index() {
         onClose={() => setIsPolicyVisible(false)}
         title="Términos y Privacidad"
       >
-          <Typography type="subtitle" style={{ marginBottom: 10, fontSize: 16 }}>
-            1. Descargo de Responsabilidad
+        <Typography type="subtitle" style={{ marginBottom: 10, fontSize: 16 }}>
+          1. Descargo de Responsabilidad
+        </Typography>
+        <Typography
+          type="md"
+          style={{
+            color: textSecondaryColor,
+            marginBottom: 24,
+            fontSize: 14,
+            lineHeight: 22,
+          }}
+        >
+          Esta aplicación tiene un fin estricta y exclusivamente{" "}
+          <Typography
+            type="md"
+            style={{
+              fontFamily: "Poppins_700Bold",
+              color: textSecondaryColor,
+              fontSize: 14,
+            }}
+          >
+            INFORMATIVO
           </Typography>
-          <Typography type="md" style={{ color: textSecondaryColor, marginBottom: 24, fontSize: 14, lineHeight: 22 }}>
-            Esta aplicación tiene un fin estricta y exclusivamente <Typography type="md" style={{ fontFamily: "Poppins_700Bold", color: textSecondaryColor, fontSize: 14 }}>INFORMATIVO</Typography>. 
-            No fijamos, no influimos, no calculamos y no especulamos con las tasas de cambio mostradas. Toda la información proporcionada se recopila automáticamente de fuentes públicas y de terceros.
-            {"\n\n"}
-            No promovemos ni participamos en la compra, venta o intercambio de divisas, ni fomentamos la especulación financiera de ningún tipo. El uso que usted le dé a esta información es bajo su propio y exclusivo riesgo.
-          </Typography>
+          . No fijamos, no influimos, no calculamos y no especulamos con las
+          tasas de cambio mostradas. Toda la información proporcionada se
+          recopila automáticamente de fuentes públicas y de terceros.
+          {"\n\n"}
+          No promovemos ni participamos en la compra, venta o intercambio de
+          divisas, ni fomentamos la especulación financiera de ningún tipo. El
+          uso que usted le dé a esta información es bajo su propio y exclusivo
+          riesgo.
+        </Typography>
 
-          <Typography type="subtitle" style={{ marginBottom: 10, fontSize: 16 }}>
-            2. Privacidad y Datos
-          </Typography>
-          <Typography type="md" style={{ color: textSecondaryColor, marginBottom: 40, fontSize: 14, lineHeight: 22 }}>
-            La aplicación NO recopila, almacena, comparte ni transmite ningún tipo de información personal, financiera o de identificación del usuario. Funciona únicamente como un agregador de información pública.
-          </Typography>
+        <Typography type="subtitle" style={{ marginBottom: 10, fontSize: 16 }}>
+          2. Privacidad y Datos
+        </Typography>
+        <Typography
+          type="md"
+          style={{
+            color: textSecondaryColor,
+            marginBottom: 40,
+            fontSize: 14,
+            lineHeight: 22,
+          }}
+        >
+          La aplicación NO recopila, almacena, comparte ni transmite ningún tipo
+          de información personal, financiera o de identificación del usuario.
+          Funciona únicamente como un agregador de información pública.
+        </Typography>
       </BottomDrawer>
 
       <BottomDrawer
@@ -395,12 +448,12 @@ export default function Index() {
         onClose={() => setIsHistoryModalVisible(false)}
         title="Tendencia de Tasa"
       >
-          {selectedCurrencyId > 0 && (
-            <RateHistory
-              currencyId={selectedCurrencyId}
-              currencyName={activeCurrencyName}
-            />
-          )}
+        {selectedCurrencyId > 0 && (
+          <RateHistory
+            currencyId={selectedCurrencyId}
+            currencyName={activeCurrencyName}
+          />
+        )}
       </BottomDrawer>
     </ScrollDiv>
   );
