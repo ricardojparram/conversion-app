@@ -1,0 +1,740 @@
+---
+import { formatCaracasTimestamp } from "@/lib/rates/caracas-date";
+import { formatCurrency, formatNumber } from "@/lib/rates/format";
+import type { ResolvedRate } from "@/lib/rates/types";
+import { createCalculatorState, getActiveCurrencyMeta, getSelectedRate } from "@/scripts/calculator-state";
+import ArrowDownUp from "./icons/ArrowDownUp.astro";
+import ArrowRight from "./icons/ArrowRight.astro";
+import Copy from "./icons/Copy.astro";
+import Paste from "./icons/Paste.astro";
+import TrendingUp from "./icons/TrendingUp.astro";
+import TrendingUpDown from "./icons/TrendingUpDown.astro";
+
+interface Props {
+  rates: ResolvedRate[];
+  initialCurrencyId?: number;
+  cardTitle?: string;
+  asH1?: boolean;
+}
+
+const {
+  rates = [],
+  initialCurrencyId = 1,
+  cardTitle = "Cambio rápido",
+  asH1 = true,
+} = Astro.props;
+
+const initialState = createCalculatorState(rates, initialCurrencyId);
+const activeRate = getSelectedRate(initialState);
+const { suffix, targetLabel } = getActiveCurrencyMeta(initialState);
+const bsFormatted = formatNumber(initialState.bsCents / 100);
+const foreignFormatted = formatNumber(initialState.foreignCents / 100);
+const updatedLabel = activeRate
+  ? formatCaracasTimestamp(activeRate.effectiveDate)
+  : "Sin conexión";
+const showBcvToggle = Boolean(activeRate && activeRate.hasNextRate && activeRate.nextRate !== null);
+---
+
+<section
+  class="calc-shell"
+  aria-label={cardTitle}
+  data-calculator-root
+  data-initial-currency-id={String(initialState.selectedCurrencyId || initialCurrencyId)}
+  data-rates-json={JSON.stringify(rates)}
+>
+  <div class="toast-anchor">
+    <div class="calc-toast" data-calc-toast hidden></div>
+  </div>
+
+  <div class="calc-card">
+    <div class="calc-header">
+      <div class="calc-title-row">
+        <span class="calc-title-icon">
+          <TrendingUp size={24} />
+        </span>
+        {
+          asH1 ? (
+            <h1 class="calc-title">{cardTitle}</h1>
+          ) : (
+            <h2 class="calc-title">{cardTitle}</h2>
+          )
+        }
+      </div>
+      <p class="calc-subtitle">
+        <span>Bolívares</span>
+        <span class="subtitle-arrow">
+          <ArrowRight size={16} />
+        </span>
+        <span data-calc-target-label>{targetLabel}</span>
+      </p>
+    </div>
+
+    <div class="offline-banner" data-offline-banner hidden={rates.length > 0}>
+      Mostrando modo sin conexión. Conéctate e intenta actualizar las tasas.
+    </div>
+
+    <div class="inputs-stack">
+      <!-- Bolívares field -->
+      <div class="field-group">
+        <label for="calc-bs-input" class="field-label">Bolívares</label>
+        <div class="currency-box-wrap" data-currency-field>
+          <div class="currency-box">
+            <span class="currency-prefix" aria-hidden="true">Bs</span>
+            <span class="currency-display" data-display="bs" aria-hidden="true">
+              {bsFormatted}
+            </span>
+            <input
+              id="calc-bs-input"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              autocorrect="off"
+              spellcheck="false"
+              value={String(initialState.bsCents)}
+              aria-valuetext={`${bsFormatted} Bolívares`}
+              class="hidden-currency-input"
+            />
+            <button
+              type="button"
+              class="copy-btn"
+              data-copy-btn
+              aria-label="Copiar monto en Bolívares"
+              title="Copiar Bolívares"
+            >
+              <Copy size={20} />
+            </button>
+          </div>
+
+          <div class="paste-tooltip" data-paste-tooltip hidden>
+            <button type="button" class="paste-btn" data-paste-btn>
+              <Paste size={16} />
+              <span>Pegar</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="swap-icon-row" aria-hidden="true">
+        <ArrowDownUp size={20} />
+      </div>
+
+      <!-- Foreign currency field -->
+      <div class="field-group">
+        <label for="calc-foreign-input" class="field-label" data-foreign-label>
+          {targetLabel}
+        </label>
+        <div class="currency-box-wrap" data-currency-field>
+          <div class="currency-box">
+            <span class="currency-prefix" data-foreign-prefix aria-hidden="true">
+              {suffix}
+            </span>
+            <span class="currency-display" data-display="foreign" aria-hidden="true">
+              {foreignFormatted}
+            </span>
+            <input
+              id="calc-foreign-input"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              autocorrect="off"
+              spellcheck="false"
+              value={String(initialState.foreignCents)}
+              aria-valuetext={`${foreignFormatted} ${targetLabel}`}
+              class="hidden-currency-input"
+            />
+            <button
+              type="button"
+              class="copy-btn"
+              data-copy-btn
+              aria-label="Copiar monto en divisa"
+              title="Copiar divisa"
+            >
+              <Copy size={20} />
+            </button>
+          </div>
+
+          <div class="paste-tooltip" data-paste-tooltip hidden>
+            <button type="button" class="paste-btn" data-paste-btn>
+              <Paste size={16} />
+              <span>Pegar</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sources selector section -->
+    <div class="sources-section">
+      <div class="sources-header">
+        <span class="sources-title">Fuentes</span>
+        <div class="updated-meta">
+          <span class="updated-text">
+            Actualizado: <span data-updated-at>{updatedLabel}</span>
+          </span>
+          <button
+            type="button"
+            class="refresh-btn"
+            data-refresh-rates
+            aria-label="Actualizar tasas"
+            title="Actualizar tasas"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+              <polyline points="21 3 21 9 15 9" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="sources-grid" data-sources-grid>
+        {
+          rates.map((r, i) => {
+            const isActive = r.currencyId === initialState.selectedCurrencyId;
+            const isOddLast = (i + 1) % 2 === 1 && i + 1 === rates.length;
+            return (
+              <button
+                type="button"
+                data-source-card
+                data-currency-id={String(r.currencyId)}
+                aria-pressed={isActive ? "true" : "false"}
+                class:list={[
+                  "source-card",
+                  { "is-active": isActive, "is-full-span": isOddLast },
+                ]}
+              >
+                <span class="source-name">{r.currencyName}</span>
+                <span class="source-rate">
+                  {formatCurrency(r.effectiveRate, "Bs")}
+                </span>
+              </button>
+            );
+          })
+        }
+      </div>
+
+      <!-- BCV Effective Today vs Next BCV Rate preview switcher -->
+      <div class="bcv-toggle-wrap" data-bcv-toggle-wrap hidden={!showBcvToggle}>
+        <button
+          type="button"
+          class="bcv-toggle-btn is-selected"
+          data-bcv-mode="current"
+          aria-pressed="true"
+        >
+          <span class="bcv-toggle-label">Vigente hoy</span>
+          <span class="bcv-toggle-rate" data-bcv-current-rate>
+            {activeRate ? formatCurrency(activeRate.effectiveRate, "Bs") : ""}
+          </span>
+        </button>
+        <button
+          type="button"
+          class="bcv-toggle-btn"
+          data-bcv-mode="next"
+          aria-pressed="false"
+        >
+          <span class="bcv-toggle-label">Próxima tasa BCV</span>
+          <span class="bcv-toggle-rate" data-bcv-next-rate>
+            {
+              activeRate && activeRate.nextRate !== null
+                ? formatCurrency(activeRate.nextRate, "Bs")
+                : ""
+            }
+          </span>
+        </button>
+      </div>
+
+      <button
+        type="button"
+        class="trend-btn"
+        data-open-history
+        hidden={initialState.selectedCurrencyId <= 0}
+      >
+        <span class="trend-btn-icon">
+          <TrendingUpDown size={18} />
+        </span>
+        <span>Ver tendencia y fluctuación</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<style>
+  .calc-shell {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    margin-inline: auto;
+    padding: 0.75rem clamp(1.25rem, 6vw, 2.5rem) 1rem;
+  }
+
+  .toast-anchor {
+    position: fixed;
+    top: 4.5rem;
+    left: 0;
+    right: 0;
+    z-index: 99;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  .calc-toast[hidden] {
+    display: none;
+  }
+
+  .calc-toast {
+    padding: 0.5rem 1.125rem;
+    border-radius: 20px;
+    border: 2px solid var(--cr-border);
+    background-color: var(--cr-bg-secondary);
+    color: var(--cr-text-secondary);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    box-shadow: 1px 4px 10px rgba(0, 0, 0, 0.2);
+  }
+
+  .calc-toast.is-success {
+    background-color: var(--cr-primary);
+    border-color: green;
+    color: #ffffff;
+  }
+
+  .calc-toast.is-error {
+    background-color: #e00000;
+    border-color: #a00000;
+    color: #ffffff;
+  }
+
+  .calc-card {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .calc-header {
+    width: 100%;
+    margin-bottom: 1.25rem;
+    text-align: center;
+  }
+
+  .calc-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    margin-bottom: 0.3125rem;
+  }
+
+  .calc-title-icon {
+    color: var(--cr-primary);
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .calc-title {
+    margin: 0;
+    font-size: clamp(1.625rem, 6vw, 2rem);
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    color: var(--cr-text);
+  }
+
+  .calc-subtitle {
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    font-size: 1rem;
+    color: var(--cr-text-secondary);
+  }
+
+  .subtitle-arrow {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .offline-banner[hidden] {
+    display: none;
+  }
+
+  .offline-banner {
+    margin-bottom: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 10px;
+    border: 1px solid var(--cr-tint);
+    background-color: var(--cr-bg-secondary);
+    color: var(--cr-text);
+    font-size: 0.8125rem;
+    text-align: center;
+  }
+
+  .inputs-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    padding-bottom: 0.875rem;
+  }
+
+  .field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .field-label {
+    padding-left: 5px;
+    font-size: 1rem;
+    color: var(--cr-text);
+  }
+
+  .currency-box-wrap {
+    position: relative;
+  }
+
+  .currency-box {
+    position: relative;
+    height: 50px;
+    background-color: var(--cr-bg-secondary);
+    border: 1px solid var(--cr-border);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    padding-left: 14px;
+    padding-right: 44px;
+    gap: 8px;
+    transition: background-color 140ms ease, border-color 140ms ease;
+  }
+
+  .currency-box:focus-within {
+    background-color: var(--cr-bg-focus);
+    border-color: var(--cr-border-focus);
+  }
+
+  .currency-box:has(.hidden-currency-input:focus-visible) {
+    outline: 3px solid var(--cr-primary);
+    outline-offset: 2px;
+  }
+
+  .currency-prefix {
+    min-width: 18px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--cr-text-secondary);
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .currency-display {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--cr-text);
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .hidden-currency-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    caret-color: transparent;
+    font-size: 1rem;
+    border: 0;
+    background: transparent;
+    cursor: text;
+    z-index: 1;
+  }
+
+  .copy-btn {
+    position: absolute;
+    right: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 38px;
+    height: 38px;
+    z-index: 2;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--cr-text-secondary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: color 150ms ease, background-color 150ms ease;
+  }
+
+  .copy-btn:hover {
+    color: var(--cr-text);
+    background-color: var(--cr-bg-focus);
+  }
+
+  .copy-btn :global(.copy-check-tick) {
+    opacity: 0;
+    transition: opacity 120ms ease;
+  }
+
+  .copy-btn.is-copied {
+    color: var(--cr-primary);
+  }
+
+  .copy-btn.is-copied :global(.copy-check-tick) {
+    opacity: 1;
+  }
+
+  .paste-tooltip[hidden] {
+    display: none;
+  }
+
+  .paste-tooltip {
+    position: absolute;
+    right: 40px;
+    top: -36px;
+    z-index: 30;
+    background-color: var(--cr-bg-secondary);
+    border: 1px solid var(--cr-border);
+    border-radius: 10px;
+    padding: 0.25rem 0.75rem;
+    box-shadow: 1px 4px 10px rgba(0, 0, 0, 0.14);
+  }
+
+  .paste-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    border: 0;
+    background: transparent;
+    color: var(--cr-text-secondary);
+    font-family: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.25rem 0;
+    cursor: pointer;
+  }
+
+  .paste-btn:hover {
+    color: var(--cr-primary);
+  }
+
+  .swap-icon-row {
+    display: flex;
+    justify-content: center;
+    margin-top: 0.375rem;
+    color: var(--cr-primary);
+  }
+
+  .sources-section {
+    padding-top: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+  }
+
+  .sources-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.125rem;
+  }
+
+  .sources-title {
+    font-size: 1rem;
+    color: var(--cr-text);
+  }
+
+  .updated-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+
+  .updated-text {
+    font-size: 0.875rem;
+    color: var(--cr-text-secondary);
+    opacity: 0.85;
+  }
+
+  .refresh-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    border: 1px solid var(--cr-border);
+    background-color: var(--cr-bg-secondary);
+    color: var(--cr-text-secondary);
+    cursor: pointer;
+    transition: color 150ms ease, background-color 150ms ease;
+  }
+
+  .refresh-btn:hover {
+    color: var(--cr-primary);
+    background-color: var(--cr-bg-focus);
+  }
+
+  .refresh-btn[data-loading="true"] svg {
+    animation: cr-spin-refresh 0.8s linear infinite;
+  }
+
+  @keyframes cr-spin-refresh {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .sources-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .calc-shell :global(.source-card) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.125rem;
+    padding: 12px 8px;
+    border-radius: 10px;
+    border: 1px solid var(--cr-border);
+    background-color: var(--cr-bg-secondary);
+    cursor: pointer;
+    font-family: inherit;
+    text-align: center;
+    transition: background-color 140ms ease, border-color 140ms ease;
+  }
+
+  .calc-shell :global(.source-card:hover:not(.is-active)) {
+    border-color: var(--cr-border-focus);
+    background-color: var(--cr-bg-focus);
+  }
+
+  .calc-shell :global(.source-card.is-full-span) {
+    grid-column: 1 / -1;
+  }
+
+  .calc-shell :global(.source-card.is-active) {
+    background-color: var(--cr-primary);
+    border: 2px solid var(--cr-primary-dark);
+    padding: 11px 7px;
+  }
+
+  .calc-shell :global(.source-name) {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--cr-text-secondary);
+  }
+
+  .calc-shell :global(.source-rate) {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--cr-primary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .calc-shell :global(.source-card.is-active .source-name),
+  .calc-shell :global(.source-card.is-active .source-rate) {
+    color: #ffffff;
+  }
+
+  .bcv-toggle-wrap[hidden] {
+    display: none;
+  }
+
+  .bcv-toggle-wrap {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+  }
+
+  .bcv-toggle-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.125rem;
+    padding: 0.5rem 0.625rem;
+    border-radius: 9px;
+    border: 1px solid var(--cr-border);
+    background-color: var(--cr-bg-secondary);
+    color: var(--cr-text-secondary);
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .bcv-toggle-btn.is-selected {
+    border-color: var(--cr-primary);
+    background-color: color-mix(in srgb, var(--cr-primary) 10%, var(--cr-bg-secondary));
+    color: var(--cr-text);
+  }
+
+  .bcv-toggle-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .bcv-toggle-rate {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--cr-primary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .trend-btn[hidden] {
+    display: none;
+  }
+
+  .trend-btn {
+    margin-top: 0.25rem;
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    padding: 0.625rem 0.875rem;
+    border-radius: 10px;
+    border: 1px solid var(--cr-border);
+    background-color: var(--cr-bg-secondary);
+    color: var(--cr-text-secondary);
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 150ms ease, border-color 150ms ease;
+  }
+
+  .trend-btn:hover {
+    background-color: var(--cr-bg-focus);
+    border-color: var(--cr-border-focus);
+    color: var(--cr-text);
+  }
+
+  .trend-btn-icon {
+    color: var(--cr-primary);
+    display: inline-flex;
+    align-items: center;
+  }
+</style>
+
+<script>
+  import { initCalculator } from "@/scripts/calculator-client";
+  initCalculator();
+</script>

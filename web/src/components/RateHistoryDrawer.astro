@@ -1,0 +1,201 @@
+---
+import type { ResolvedRate } from "@/lib/rates/types";
+import RateHistoryPanel from "./RateHistoryPanel.astro";
+import XIcon from "./icons/XIcon.astro";
+
+interface Props {
+  rates: ResolvedRate[];
+  initialCurrencyId?: number;
+}
+
+const { rates, initialCurrencyId = 1 } = Astro.props;
+---
+
+<dialog
+  id="history-dialog"
+  closedby="any"
+  aria-labelledby="history-dialog-title"
+  class="history-dialog"
+>
+  <div class="dialog-sheet" data-dialog-sheet>
+    <div class="dialog-header" data-drawer-handle>
+      <div class="drag-handle" aria-hidden="true"></div>
+      <div class="dialog-title-bar">
+        <h2 id="history-dialog-title" class="dialog-title">Tendencia de Tasa</h2>
+        <button
+          type="button"
+          class="close-btn"
+          data-dialog-close
+          aria-label="Cerrar tendencia de tasa"
+        >
+          <XIcon size={14} />
+        </button>
+      </div>
+    </div>
+
+    <div class="dialog-scroll">
+      <RateHistoryPanel
+        id="drawer-history-panel"
+        rates={rates}
+        initialCurrencyId={initialCurrencyId}
+        defaultDays={7}
+        autoInit={false}
+        showFullPageLink={true}
+      />
+    </div>
+  </div>
+</dialog>
+
+<style>
+  .history-dialog:not([open]) {
+    display: none;
+  }
+
+  .history-dialog[open] {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    width: 100%;
+    max-width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    background: transparent;
+    overflow: hidden;
+  }
+
+  .dialog-sheet {
+    width: 100%;
+    max-height: 92dvh;
+    min-height: 75dvh;
+    background-color: var(--cr-bg);
+    color: var(--cr-text);
+    border-top-left-radius: 24px;
+    border-top-right-radius: 24px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.25);
+    transition: transform 180ms ease;
+    contain: layout style;
+  }
+
+  .dialog-header {
+    padding: 0.875rem 1.5rem 0.5rem;
+    width: 100%;
+    touch-action: pan-x;
+    cursor: grab;
+  }
+
+  .drag-handle {
+    width: 36px;
+    height: 5px;
+    border-radius: 999px;
+    background-color: var(--cr-border);
+    margin: 0 auto 0.5rem;
+  }
+
+  .dialog-title-bar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .dialog-title {
+    margin: 0.25rem 0 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    text-align: center;
+    color: var(--cr-text);
+  }
+
+  .close-btn {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 0;
+    background-color: var(--cr-border);
+    color: var(--cr-text-secondary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .close-btn:hover {
+    background-color: var(--cr-border-focus);
+    color: var(--cr-text);
+  }
+
+  @media (pointer: coarse) {
+    .close-btn {
+      min-width: 36px;
+      min-height: 36px;
+    }
+  }
+
+  .dialog-scroll {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 0.625rem 1.5rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  @media (min-width: 768px) {
+    .history-dialog[open] {
+      align-items: center;
+      padding: 1rem;
+    }
+
+    .dialog-sheet {
+      width: 440px;
+      min-height: auto;
+      max-height: 85dvh;
+      border-radius: 16px;
+      border: 1px solid var(--cr-border);
+      background-color: var(--cr-bg-secondary);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+    }
+
+    .dialog-header {
+      padding: 1rem 1.5rem 0.75rem;
+      border-bottom: 1px solid var(--cr-border);
+      cursor: default;
+      touch-action: auto;
+    }
+
+    .drag-handle {
+      display: none;
+    }
+
+    .dialog-title-bar {
+      justify-content: space-between;
+    }
+
+    .dialog-title {
+      margin: 0;
+      text-align: left;
+    }
+
+    .close-btn {
+      position: static;
+      transform: none;
+    }
+
+    .dialog-scroll {
+      padding: 0.75rem 1.5rem 1.5rem;
+    }
+  }
+</style>
+
+<script>
+  import { initHistoryDrawer } from "@/scripts/drawer-client";
+  initHistoryDrawer();
+</script>

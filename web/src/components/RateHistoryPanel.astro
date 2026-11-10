@@ -1,0 +1,623 @@
+---
+import { formatSimpleCaracasDate } from "@/lib/rates/caracas-date";
+import { formatCurrency } from "@/lib/rates/format";
+import type { HistorySeries, ResolvedRate } from "@/lib/rates/types";
+import { buildChartSeriesModel } from "@/scripts/calculator-state";
+
+interface Props {
+  id?: string;
+  rates: ResolvedRate[];
+  initialCurrencyId?: number;
+  defaultDays?: 7 | 15 | 30;
+  defaultSources?: number[];
+  initialHistory?: HistorySeries;
+  autoInit?: boolean;
+  showFullPageLink?: boolean;
+}
+
+const {
+  id = "cr-history-panel",
+  rates = [],
+  initialCurrencyId = 1,
+  defaultDays = 7,
+  defaultSources = [initialCurrencyId],
+  initialHistory = {},
+  autoInit = true,
+  showFullPageLink = false,
+} = Astro.props;
+
+const activeSources =
+  defaultSources.length > 0 ? defaultSources : [initialCurrencyId];
+
+const ssrModel = buildChartSeriesModel({
+  selectedSources: activeSources,
+  rates,
+  historyByCurrency: initialHistory,
+  days: defaultDays,
+});
+
+const isSingleMode = activeSources.length === 1;
+const singleSeries = ssrModel.series[0] ?? null;
+const hasData = ssrModel.series.length > 0;
+const modeTitle =
+  isSingleMode && singleSeries
+    ? singleSeries.shortName
+    : isSingleMode
+      ? (rates.find((r) => r.currencyId === activeSources[0])?.currencyName.replace("Dólar ", "") ?? "Tasa")
+      : "Comparar";
+
+const rawSinglePoints =
+  isSingleMode && singleSeries
+    ? (initialHistory[singleSeries.id] ?? []).slice(-defaultDays).reverse()
+    : [];
+---
+
+<section
+  id={id}
+  class="history-panel"
+  data-history-panel
+  data-auto-init={autoInit ? "true" : "false"}
+  data-initial-currency-id={String(initialCurrencyId)}
+  data-default-days={String(defaultDays)}
+  data-default-sources={activeSources.join(",")}
+  data-rates-json={JSON.stringify(rates)}
+  data-initial-history-json={JSON.stringify(initialHistory)}
+>
+  <div class="history-header">
+    <h3 class="history-title" data-history-mode-title>{modeTitle}</h3>
+
+    <div class="range-tabs" role="group" aria-label="Rango de días">
+      {
+        ([7, 15, 30] as const).map((r) => {
+          const isSelected = r === defaultDays;
+          return (
+            <button
+              type="button"
+              data-range-days={String(r)}
+              aria-pressed={isSelected ? "true" : "false"}
+              class:list={["range-tab", { "is-active": isSelected }]}
+            >
+              {r}D
+            </button>
+          );
+        })
+      }
+    </div>
+  </div>
+
+  <div class="source-filters" data-source-filters>
+    {
+      rates.map((r) => {
+        const selected = activeSources.includes(r.currencyId);
+        const shortName = r.currencyName.replace("Dólar ", "");
+        const dotColor =
+          r.currencyId === 1
+            ? "#16a249"
+            : r.currencyId === 2
+              ? "#0d9488"
+              : r.currencyId === 3
+                ? "#ea4335"
+                : "#2563eb";
+        return (
+          <button
+            type="button"
+            data-filter-id={String(r.currencyId)}
+            aria-pressed={selected ? "true" : "false"}
+            class:list={["source-chip", { "is-selected": selected }]}
+            style={`--chip-color: ${dotColor}`}
+          >
+            <span class="chip-dot" aria-hidden="true"></span>
+            <span>{shortName}</span>
+          </button>
+        );
+      })
+    }
+  </div>
+
+  <div class="history-state-box" data-history-loading hidden>
+    <span class="spinner" aria-hidden="true"></span>
+    <span class="state-text">Cargando historial...</span>
+  </div>
+
+  <div class="history-state-box" data-history-empty hidden={hasData}>
+    <p class="state-text">No hay datos de fluctuación disponibles.</p>
+  </div>
+
+  <div data-history-content hidden={!hasData}>
+    <div
+      class="metrics-grid"
+      data-single-metrics
+      hidden={!(isSingleMode && singleSeries)}
+    >
+      <div class="metric-block">
+        <span class="metric-label">Mínimo</span>
+        <span class="metric-value" data-metric-min>
+          {hasData ? formatCurrency(ssrModel.globalMin, "Bs") : "—"}
+        </span>
+      </div>
+      <div class="metric-block">
+        <span class="metric-label">Máximo</span>
+        <span class="metric-value" data-metric-max>
+          {hasData ? formatCurrency(ssrModel.globalMax, "Bs") : "—"}
+        </span>
+      </div>
+      <div class="metric-block is-end">
+        <span class="metric-label">Variación</span>
+        <span
+          class="metric-value metric-change"
+          data-metric-change
+          style={
+            singleSeries
+              ? `color: ${singleSeries.isPositive ? "#16a249" : "#ea4335"}`
+              : undefined
+          }
+        >
+          {
+            singleSeries
+              ? `${singleSeries.isPositive ? "▲" : "▼"} ${singleSeries.changePercent.toFixed(2)}%`
+              : "—"
+          }
+        </span>
+      </div>
+    </div>
+
+    <div class="chart-wrapper">
+      <svg
+        data-chart-svg
+        viewBox="0 0 300 150"
+        width="100%"
+        height="150"
+        preserveAspectRatio="none"
+        role="img"
+        aria-label={`Gráfico de tendencia de tasas últimos ${defaultDays} días`}
+      >
+        <title>Tendencia de tasa últimos {defaultDays} días</title>
+        <defs>
+          {
+            ssrModel.series.map((s) => (
+              <linearGradient id={`${id}-grad-${s.id}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color={s.color} stop-opacity="0.20" />
+                <stop offset="100%" stop-color={s.color} stop-opacity="0.00" />
+              </linearGradient>
+            ))
+          }
+        </defs>
+        {
+          ssrModel.series.map(
+            (s) =>
+              s.fillPath && (
+                <path d={s.fillPath} fill={`url(#${id}-grad-${s.id})`} />
+              ),
+          )
+        }
+        {
+          ssrModel.series.map(
+            (s) =>
+              s.linePath && (
+                <path
+                  d={s.linePath}
+                  fill="none"
+                  stroke={s.color}
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              ),
+          )
+        }
+        {
+          ssrModel.series.map(
+            (s) =>
+              s.lastPoint && (
+                <>
+                  <circle
+                    cx={s.lastPoint.x.toFixed(1)}
+                    cy={s.lastPoint.y.toFixed(1)}
+                    r="8"
+                    fill={s.color}
+                    opacity="0.15"
+                  />
+                  <circle
+                    cx={s.lastPoint.x.toFixed(1)}
+                    cy={s.lastPoint.y.toFixed(1)}
+                    r="4"
+                    fill={s.color}
+                  />
+                </>
+              ),
+          )
+        }
+      </svg>
+    </div>
+
+    <div class="compare-list" data-multi-summary hidden={isSingleMode}>
+      {
+        !isSingleMode &&
+          ssrModel.series.map((s) => {
+            const arrow = s.isPositive ? "▲" : "▼";
+            const trendCol = s.isPositive ? "#16a249" : "#ea4335";
+            return (
+              <div class="compare-row">
+                <div>
+                  <div class="compare-name">
+                    <span class="compare-dot" style={`background:${s.color}`}></span>
+                    <span>{s.shortName}</span>
+                  </div>
+                  <div class="compare-range">
+                    Mín: {formatCurrency(s.minRate, "Bs")} • Máx:{" "}
+                    {formatCurrency(s.maxRate, "Bs")}
+                  </div>
+                </div>
+                <div class="compare-values">
+                  <span class="compare-latest">{formatCurrency(s.latestRate, "Bs")}</span>
+                  <span class="compare-pct" style={`color:${trendCol}`}>
+                    {arrow} {s.changePercent.toFixed(2)}%
+                  </span>
+                </div>
+              </div>
+            );
+          })
+      }
+    </div>
+
+    <div
+      class="detail-wrap"
+      data-detail-wrap
+      hidden={!(isSingleMode && singleSeries)}
+    >
+      <button
+        type="button"
+        class="detail-toggle"
+        data-detail-toggle
+        aria-expanded="false"
+      >
+        <span data-detail-label>Ver historial detallado</span>
+        <span class="detail-chevron" aria-hidden="true">▼</span>
+      </button>
+
+      <div class="detail-list" data-detail-list hidden>
+        {
+          rawSinglePoints.map((pt) => (
+            <div class="detail-row">
+              <span>{formatSimpleCaracasDate(pt.date)}</span>
+              <strong>{formatCurrency(pt.rate, "Bs")}</strong>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </div>
+
+  {
+    showFullPageLink && (
+      <div class="history-full-link-wrap">
+        <a href="/tendencias" class="history-full-link">
+          Ver historial completo de 30 días →
+        </a>
+      </div>
+    )
+  }
+</section>
+
+<style>
+  .history-panel {
+    width: 100%;
+    padding-block: 0.5rem;
+  }
+
+  .history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .history-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--cr-text);
+  }
+
+  .range-tabs {
+    display: inline-flex;
+    border: 1px solid var(--cr-border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .range-tab {
+    border: 0;
+    background: transparent;
+    padding: 0.375rem 0.6875rem;
+    min-height: 30px;
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--cr-text-secondary);
+    cursor: pointer;
+    transition: background-color 150ms ease, color 150ms ease;
+  }
+
+  .range-tab + .range-tab {
+    border-left: 1px solid var(--cr-border);
+  }
+
+  .range-tab.is-active {
+    background-color: var(--cr-primary);
+    color: #ffffff;
+  }
+
+  .source-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .history-panel :global(.source-chip) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.3125rem 0.625rem;
+    min-height: 30px;
+    border-radius: 14px;
+    border: 1px solid var(--cr-border);
+    background: transparent;
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--cr-text-secondary);
+    cursor: pointer;
+    transition: border-color 150ms ease, color 150ms ease;
+  }
+
+  .history-panel :global(.source-chip.is-selected) {
+    border-color: var(--chip-color, var(--cr-primary));
+    border-width: 1.5px;
+    color: var(--cr-text);
+  }
+
+  .history-panel :global(.chip-dot) {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--chip-color, var(--cr-primary));
+    opacity: 0.3;
+    transition: opacity 150ms ease;
+  }
+
+  .history-panel :global(.source-chip.is-selected .chip-dot) {
+    opacity: 1;
+  }
+
+  .history-state-box[hidden] {
+    display: none;
+  }
+
+  .history-state-box {
+    min-height: 150px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding-inline: 1rem;
+    text-align: center;
+  }
+
+  .state-text {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--cr-text-secondary);
+  }
+
+  .spinner {
+    width: 24px;
+    height: 24px;
+    border: 2.5px solid var(--cr-border);
+    border-top-color: var(--cr-primary);
+    border-radius: 50%;
+    animation: cr-spin 0.7s linear infinite;
+  }
+
+  @keyframes cr-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .metrics-grid[hidden] {
+    display: none;
+  }
+
+  .metrics-grid {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .metric-block {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .metric-block.is-end {
+    align-items: flex-end;
+    text-align: right;
+  }
+
+  .metric-label {
+    font-size: 0.8125rem;
+    color: var(--cr-text-secondary);
+  }
+
+  .metric-value {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--cr-text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .metric-change {
+    font-size: 0.875rem;
+  }
+
+  .chart-wrapper {
+    height: 150px;
+    margin-bottom: 0.625rem;
+  }
+
+  .compare-list[hidden] {
+    display: none;
+  }
+
+  .compare-list {
+    margin-top: 0.75rem;
+    margin-bottom: 0.625rem;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .history-panel :global(.compare-row) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    padding-block: 0.75rem;
+    border-bottom: 1px solid var(--cr-border);
+  }
+
+  .history-panel :global(.compare-row:last-child) {
+    border-bottom: 0;
+  }
+
+  .history-panel :global(.compare-name) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--cr-text);
+  }
+
+  .history-panel :global(.compare-dot) {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .history-panel :global(.compare-range) {
+    margin-left: 1rem;
+    font-size: 0.75rem;
+    color: var(--cr-text-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .history-panel :global(.compare-values) {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .history-panel :global(.compare-latest) {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--cr-text);
+  }
+
+  .history-panel :global(.compare-pct) {
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-top: 0.125rem;
+  }
+
+  .detail-wrap[hidden] {
+    display: none;
+  }
+
+  .detail-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 0 0.25rem;
+    margin-top: 0.625rem;
+    border: 0;
+    border-top: 1px solid var(--cr-border);
+    background: transparent;
+    color: var(--cr-primary);
+    font-family: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .detail-chevron {
+    transition: transform 180ms ease;
+    font-size: 0.75rem;
+  }
+
+  .detail-toggle.is-open .detail-chevron {
+    transform: rotate(180deg);
+  }
+
+  .detail-list[hidden] {
+    display: none;
+  }
+
+  .detail-list {
+    margin-top: 0.625rem;
+    padding-inline: 0.25rem;
+  }
+
+  .history-panel :global(.detail-row) {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-block: 0.625rem;
+    border-bottom: 1px solid var(--cr-border);
+    font-size: 0.875rem;
+    color: var(--cr-text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .history-panel :global(.detail-row strong) {
+    color: var(--cr-primary);
+    font-weight: 600;
+  }
+
+  .history-panel :global(.detail-row:last-child) {
+    border-bottom: 0;
+  }
+
+  .history-full-link-wrap {
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--cr-border);
+    text-align: center;
+  }
+
+  .history-full-link {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--cr-primary);
+    text-decoration: none;
+  }
+
+  .history-full-link:hover {
+    text-decoration: underline;
+  }
+</style>
+
+<script>
+  import { initStandaloneHistoryPanels } from "@/scripts/history-client";
+  initStandaloneHistoryPanels();
+</script>
