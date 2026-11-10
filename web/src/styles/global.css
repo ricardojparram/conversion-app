@@ -1,0 +1,174 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light dark;
+
+  --cr-text-light: #25364b;
+  --cr-text-dark: #e6eff8;
+  --cr-text-secondary-light: rgba(0, 0, 0, 0.6);
+  --cr-text-secondary-dark: rgba(255, 255, 255, 0.8);
+  --cr-bg-light: #f9fafc;
+  --cr-bg-dark: #0e151d;
+  --cr-bg-secondary-light: #ffffff;
+  --cr-bg-secondary-dark: #1a2633;
+  --cr-bg-focus-light: #f0f4f8;
+  --cr-bg-focus-dark: #253547;
+  --cr-border-light: rgba(0, 0, 0, 0.2);
+  --cr-border-dark: rgba(255, 255, 255, 0.2);
+  --cr-border-focus-light: rgba(0, 0, 0, 0.4);
+  --cr-border-focus-dark: rgba(255, 255, 255, 0.4);
+  --cr-tint-light: #d67d00;
+  --cr-tint-dark: #eb8a02;
+
+  --cr-primary: #16a249;
+  --cr-primary-dark: #037c2f;
+  --cr-danger: #ea4335;
+  --cr-blue: #2563eb;
+  --cr-teal: #0d9488;
+
+  /* Default (Light fallback for legacy browsers) */
+  --cr-text: var(--cr-text-light);
+  --cr-text-secondary: var(--cr-text-secondary-light);
+  --cr-bg: var(--cr-bg-light);
+  --cr-bg-secondary: var(--cr-bg-secondary-light);
+  --cr-bg-focus: var(--cr-bg-focus-light);
+  --cr-border: var(--cr-border-light);
+  --cr-border-focus: var(--cr-border-focus-light);
+  --cr-tint: var(--cr-tint-light);
+
+  @media (prefers-color-scheme: dark) {
+    --cr-text: var(--cr-text-dark);
+    --cr-text-secondary: var(--cr-text-secondary-dark);
+    --cr-bg: var(--cr-bg-dark);
+    --cr-bg-secondary: var(--cr-bg-secondary-dark);
+    --cr-bg-focus: var(--cr-bg-focus-dark);
+    --cr-border: var(--cr-border-dark);
+    --cr-border-focus: var(--cr-border-focus-dark);
+    --cr-tint: var(--cr-tint-dark);
+  }
+
+  @supports (color: light-dark(white, black)) {
+    --cr-text: light-dark(var(--cr-text-light), var(--cr-text-dark));
+    --cr-text-secondary: light-dark(
+      var(--cr-text-secondary-light),
+      var(--cr-text-secondary-dark)
+    );
+    --cr-bg: light-dark(var(--cr-bg-light), var(--cr-bg-dark));
+    --cr-bg-secondary: light-dark(
+      var(--cr-bg-secondary-light),
+      var(--cr-bg-secondary-dark)
+    );
+    --cr-bg-focus: light-dark(
+      var(--cr-bg-focus-light),
+      var(--cr-bg-focus-dark)
+    );
+    --cr-border: light-dark(var(--cr-border-light), var(--cr-border-dark));
+    --cr-border-focus: light-dark(
+      var(--cr-border-focus-light),
+      var(--cr-border-focus-dark)
+    );
+    --cr-tint: light-dark(var(--cr-tint-light), var(--cr-tint-dark));
+  }
+
+  &:has(> head > meta[name="color-scheme"][content="dark"]) {
+    color-scheme: dark;
+  }
+
+  &:has(> head > meta[name="color-scheme"][content="light"]) {
+    color-scheme: light;
+  }
+
+  accent-color: var(--cr-primary);
+}
+
+html {
+  font-family: "Poppins", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background-color: var(--cr-bg);
+  color: var(--cr-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--cr-bg);
+  color: var(--cr-text);
+}
+
+/* Theme toggle icon visibility follows <meta name="color-scheme"> + OS scheme in pure CSS */
+.theme-toggle-to-light {
+  display: none;
+}
+
+.theme-toggle-to-dark {
+  display: inline-flex;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:has(> head > meta[name="color-scheme"][content="light dark"]) .theme-toggle-to-light {
+    display: inline-flex;
+  }
+  :root:has(> head > meta[name="color-scheme"][content="light dark"]) .theme-toggle-to-dark {
+    display: none;
+  }
+}
+
+:root:has(> head > meta[name="color-scheme"][content="dark"]) .theme-toggle-to-light {
+  display: inline-flex;
+}
+
+:root:has(> head > meta[name="color-scheme"][content="dark"]) .theme-toggle-to-dark {
+  display: none;
+}
+
+:root:has(> head > meta[name="color-scheme"][content="light"]) .theme-toggle-to-light {
+  display: none;
+}
+
+:root:has(> head > meta[name="color-scheme"][content="light"]) .theme-toggle-to-dark {
+  display: inline-flex;
+}
+
+.visually-hidden:where(:not(:focus-within, :active)) {
+  position: absolute !important;
+  clip-path: inset(50%) !important;
+  overflow: hidden !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  white-space: nowrap !important;
+}
+
+.skip-link:focus {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 1000;
+  padding: 0.5rem 0.875rem;
+  border-radius: 0.5rem;
+  background-color: var(--cr-primary);
+  color: #ffffff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+:where(a:any-link, button, summary, input, [tabindex]):focus-visible {
+  outline: 3px solid var(--cr-primary);
+  outline-offset: 2px;
+}
+
+/* Native top-layer modal containment without mutating html/body overflow */
+dialog:modal {
+  overscroll-behavior: contain;
+}
+
+dialog::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+}

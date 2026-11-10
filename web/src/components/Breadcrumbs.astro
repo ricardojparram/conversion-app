@@ -1,0 +1,84 @@
+---
+import type { BreadcrumbItem } from "@/lib/seo/schema";
+
+interface Props {
+  items: BreadcrumbItem[];
+}
+
+const { items } = Astro.props;
+---
+
+{
+  items.length > 0 && (
+    <nav aria-label="Ruta de navegación" class="breadcrumbs-nav">
+      <ol class="breadcrumbs-list">
+        {items.map((item, idx) => {
+          const isLast = idx === items.length - 1;
+          return (
+            <li class="breadcrumb-item">
+              {isLast ? (
+                <span aria-current="page" class="breadcrumb-current">
+                  {item.name}
+                </span>
+              ) : (
+                <>
+                  <a href={item.path} class="breadcrumb-link">
+                    {item.name}
+                  </a>
+                  <span aria-hidden="true" class="breadcrumb-sep">
+                    /
+                  </span>
+                </>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  )
+}
+
+<style>
+  .breadcrumbs-nav {
+    max-width: 820px;
+    margin: 0.75rem auto 0;
+    padding-inline: 1rem;
+  }
+
+  .breadcrumbs-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 0.8125rem;
+    color: var(--cr-text-secondary);
+  }
+
+  .breadcrumb-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .breadcrumb-link {
+    color: var(--cr-text-secondary);
+    text-decoration: none;
+  }
+
+  .breadcrumb-link:hover {
+    color: var(--cr-primary);
+    text-decoration: underline;
+  }
+
+  .breadcrumb-current {
+    color: var(--cr-text);
+    font-weight: 600;
+  }
+
+  .breadcrumb-sep {
+    opacity: 0.5;
+  }
+</style>

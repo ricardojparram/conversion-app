@@ -1,0 +1,98 @@
+---
+import "@fontsource/poppins/400.css";
+import "@fontsource/poppins/600.css";
+import "@fontsource/poppins/700.css";
+import "@/styles/global.css";
+import type { PageMeta } from "@/lib/seo/meta";
+import { SITE_NAME } from "@/lib/seo/config";
+import Navbar from "@/components/Navbar.astro";
+import Footer from "@/components/Footer.astro";
+
+interface Props {
+  meta: PageMeta;
+  schemas?: Record<string, unknown>[];
+}
+
+const { meta, schemas = [] } = Astro.props;
+---
+
+<!doctype html>
+<html lang="es-VE">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <script is:inline>
+      try {
+        var savedScheme = localStorage.getItem("color-scheme");
+        if (savedScheme === "light" || savedScheme === "dark") {
+          var metaEl = document.querySelector('meta[name="color-scheme"]');
+          if (metaEl) metaEl.setAttribute("content", savedScheme);
+        }
+      } catch (_err) {}
+    </script>
+
+    <title>{meta.title}</title>
+    <meta name="description" content={meta.description} />
+    <meta name="robots" content={meta.robots} />
+    <link rel="canonical" href={meta.canonical} />
+    <link rel="alternate" hreflang="es-VE" href={meta.canonical} />
+
+    <!-- Open Graph -->
+    <meta property="og:locale" content="es_VE" />
+    <meta property="og:site_name" content={SITE_NAME} />
+    <meta property="og:type" content={meta.ogType} />
+    <meta property="og:title" content={meta.ogTitle} />
+    <meta property="og:description" content={meta.ogDescription} />
+    <meta property="og:url" content={meta.canonical} />
+    <meta property="og:image" content={meta.ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={meta.ogTitle} />
+    <meta name="twitter:description" content={meta.ogDescription} />
+    <meta name="twitter:image" content={meta.ogImage} />
+
+    <!-- PWA & Icons -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <meta name="theme-color" content="#16a249" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content={SITE_NAME} />
+
+    {
+      schemas.map((schema) => (
+        <script is:inline type="application/ld+json" set:html={JSON.stringify(schema)} />
+      ))
+    }
+  </head>
+  <body>
+    <a href="#main-content" class="skip-link visually-hidden">
+      Ir al contenido principal
+    </a>
+
+    <Navbar activeRoute={meta.routeKey} />
+
+    <main id="main-content" tabindex="-1" class="flex-1 w-full">
+      <slot />
+    </main>
+
+    <Footer />
+
+    <div
+      id="app-live-region"
+      class="visually-hidden"
+      aria-live="polite"
+      aria-atomic="true"
+    ></div>
+
+    <script>
+      import { initThemeToggle } from "@/scripts/theme";
+      initThemeToggle();
+    </script>
+  </body>
+</html>
