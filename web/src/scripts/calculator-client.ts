@@ -1,17 +1,15 @@
 import { formatCaracasTimestamp } from "@/lib/rates/caracas-date";
 import { centsToNumber } from "@/lib/rates/calculator";
 import { formatCurrency, formatNumber } from "@/lib/rates/format";
-import type { RateDisplayMode, ResolvedRate } from "@/lib/rates/types";
+import type { ResolvedRate } from "@/lib/rates/types";
 import {
   applyClipboardValue,
   createCalculatorState,
   getActiveCurrencyMeta,
   getActiveRateDate,
-  getSelectedRate,
   inputDigitsForField,
   resetOnFocus,
   selectSource,
-  setBcvDisplayMode,
   updateRatesSnapshot,
   type CalculatorState,
 } from "./calculator-state";
@@ -138,10 +136,6 @@ function setupCalculatorRoot(root: HTMLElement): void {
   const targetLabelEl = root.querySelector<HTMLElement>("[data-calc-target-label]");
   const updatedAtEl = root.querySelector<HTMLElement>("[data-updated-at]");
   const sourcesGrid = root.querySelector<HTMLElement>("[data-sources-grid]");
-  const bcvToggleWrap = root.querySelector<HTMLElement>("[data-bcv-toggle-wrap]");
-  const bcvCurrentRateEl = root.querySelector<HTMLElement>("[data-bcv-current-rate]");
-  const bcvNextRateEl = root.querySelector<HTMLElement>("[data-bcv-next-rate]");
-  const bcvButtons = root.querySelectorAll<HTMLButtonElement>("[data-bcv-mode]");
   const refreshBtn = root.querySelector<HTMLButtonElement>("[data-refresh-rates]");
   const openHistoryBtn = root.querySelector<HTMLButtonElement>("[data-open-history]");
   const toastEl = root.querySelector<HTMLElement>("[data-calc-toast]");
@@ -228,26 +222,6 @@ function setupCalculatorRoot(root: HTMLElement): void {
 
     if (offlineBanner) {
       offlineBanner.hidden = state.rates.length > 0;
-    }
-
-    const active = getSelectedRate(state);
-    if (bcvToggleWrap) {
-      const showBcv = Boolean(active && active.hasNextRate && active.nextRate !== null);
-      bcvToggleWrap.hidden = !showBcv;
-      if (showBcv && active && active.nextRate !== null) {
-        if (bcvCurrentRateEl) {
-          bcvCurrentRateEl.textContent = formatCurrency(active.effectiveRate, "Bs");
-        }
-        if (bcvNextRateEl) {
-          bcvNextRateEl.textContent = formatCurrency(active.nextRate, "Bs");
-        }
-        bcvButtons.forEach((btn) => {
-          const mode = btn.dataset.bcvMode as RateDisplayMode;
-          const activeMode = mode === state.bcvMode;
-          btn.classList.toggle("is-selected", activeMode);
-          btn.setAttribute("aria-pressed", activeMode ? "true" : "false");
-        });
-      }
     }
 
     if (openHistoryBtn) {
@@ -386,14 +360,6 @@ function setupCalculatorRoot(root: HTMLElement): void {
   sourcesGrid
     ?.querySelectorAll<HTMLButtonElement>("[data-source-card]")
     .forEach(attachSourceHandler);
-
-  bcvButtons.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const mode = btn.dataset.bcvMode as RateDisplayMode;
-      state = setBcvDisplayMode(state, mode);
-      render();
-    });
-  });
 
   const refreshRatesFromApi = async (notifyUser: boolean) => {
     if (typeof navigator !== "undefined" && navigator.onLine === false) {

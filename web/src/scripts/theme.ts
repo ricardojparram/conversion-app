@@ -43,8 +43,8 @@ export function initThemeToggle(): void {
   if (typeof document === "undefined" || typeof window === "undefined") return;
 
   const meta = document.querySelector<HTMLMetaElement>('meta[name="color-scheme"]');
-  const toggleBtn = document.querySelector<HTMLButtonElement>("[data-theme-toggle]");
-  if (!meta || !toggleBtn) return;
+  const toggleBtns = document.querySelectorAll<HTMLButtonElement>("[data-theme-toggle]");
+  if (!meta || toggleBtns.length === 0) return;
 
   const mq = window.matchMedia("(prefers-color-scheme: dark)");
 
@@ -52,18 +52,22 @@ export function initThemeToggle(): void {
     meta.setAttribute("content", content);
   };
 
-  toggleBtn.addEventListener("click", () => {
-    const next = computeNextColorScheme(meta.getAttribute("content"), mq.matches);
-    applyMeta(next.metaContent);
-    try {
-      if (next.stored === null) {
-        window.localStorage.removeItem(STORAGE_KEY);
-      } else {
-        window.localStorage.setItem(STORAGE_KEY, next.stored);
+  toggleBtns.forEach((toggleBtn) => {
+    if (toggleBtn.dataset.themeInitialized === "true") return;
+    toggleBtn.dataset.themeInitialized = "true";
+    toggleBtn.addEventListener("click", () => {
+      const next = computeNextColorScheme(meta.getAttribute("content"), mq.matches);
+      applyMeta(next.metaContent);
+      try {
+        if (next.stored === null) {
+          window.localStorage.removeItem(STORAGE_KEY);
+        } else {
+          window.localStorage.setItem(STORAGE_KEY, next.stored);
+        }
+      } catch {
+        // Safe no-op when storage is blocked in private mode
       }
-    } catch {
-      // Safe no-op when storage is blocked in private mode
-    }
+    });
   });
 
   window.addEventListener("storage", (event) => {

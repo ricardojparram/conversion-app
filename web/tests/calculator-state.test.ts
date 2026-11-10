@@ -5,8 +5,8 @@ import {
   inputDigitsForField,
   applyClipboardValue,
   selectSource,
-  setBcvDisplayMode,
   getActiveRateValue,
+  getActiveRateDate,
   buildChartSeriesModel,
   getSourceChartColor,
 } from "@/scripts/calculator-state";
@@ -69,19 +69,18 @@ describe("calculator state machine", () => {
     expect(state.foreignCents).toBe(Math.round((1000 / 897.54) * 100));
   });
 
-  it("handles switching source and toggling BCV next-rate preview while preserving lastEdited", () => {
+  it("handles switching sources using only effectiveRate while preserving lastEdited", () => {
     let state = createCalculatorState(sampleRates, 1);
     state = inputDigitsForField(state, "foreign", "1000"); // $10.00
 
-    // Toggle BCV next rate preview -> 899.27 Bs
-    state = setBcvDisplayMode(state, "next");
-    expect(getActiveRateValue(state)).toBe(899.27);
-    expect(state.bsCents).toBe(899270);
+    expect(getActiveRateValue(state)).toBe(897.54);
+    expect(getActiveRateDate(state)).toBe("2026-11-09T00:00:00");
+    expect(state.bsCents).toBe(897540);
 
-    // Switch to USDT Venta (1050.60 Bs) -> resets BCV mode to current and recalculates bs for $10.00
+    // Switch to USDT Venta (1050.60 Bs) -> recalculates bs for $10.00
     state = selectSource(state, 3);
     expect(state.selectedCurrencyId).toBe(3);
-    expect(state.bcvMode).toBe("current");
+    expect(getActiveRateValue(state)).toBe(1050.6);
     expect(state.bsCents).toBe(1050600);
   });
 

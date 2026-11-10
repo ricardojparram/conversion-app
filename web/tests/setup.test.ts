@@ -9,11 +9,15 @@ describe("web project scaffold", () => {
     expect(fs.existsSync(path.join(publicDir, "icon-192.png"))).toBe(true);
     expect(fs.existsSync(path.join(publicDir, "icon-512.png"))).toBe(true);
     expect(fs.existsSync(path.join(publicDir, "manifest.json"))).toBe(true);
+    expect(fs.existsSync(path.join(publicDir, "sw.js"))).toBe(true);
     expect(fs.existsSync(path.join(publicDir, "og-image.png"))).toBe(true);
 
     const manifest = JSON.parse(
       fs.readFileSync(path.join(publicDir, "manifest.json"), "utf-8"),
     );
+    expect(manifest.id).toBe("/");
+    expect(manifest.start_url).toBe("/");
+    expect(manifest.display).toBe("standalone");
     expect(manifest.theme_color).toBe("#16a249");
     expect(manifest.lang).toBe("es-VE");
   });

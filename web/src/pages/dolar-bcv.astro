@@ -70,8 +70,8 @@ const usdBcv = snapshot.rates.find((r) => r.currencyId === 1) ?? null;
           {usdBcv.hasNextRate && usdBcv.nextRate !== null && usdBcv.nextDate && (
             <p class="next-rate-pill">
               Próxima tasa BCV anunciada:{" "}
-              <strong>{formatCurrency(usdBcv.nextRate, "Bs")}</strong> (fecha valor:{" "}
-              {formatCaracasTimestamp(usdBcv.nextDate)}). Puedes alternar ambos valores directo en la calculadora superior.
+              <strong>{formatCurrency(usdBcv.nextRate, "Bs")}</strong> (entra en vigencia el{" "}
+              {formatCaracasTimestamp(usdBcv.nextDate)} automáticamente).
             </p>
           )}
         </section>

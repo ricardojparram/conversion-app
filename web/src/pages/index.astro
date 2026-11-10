@@ -31,7 +31,7 @@ const schemas = buildStructuredData({
 const routeLinks = PUBLIC_ROUTES.filter((r) => r.key !== "home" && r.key !== "privacidad");
 ---
 
-<BaseLayout meta={meta} schemas={schemas}>
+<BaseLayout meta={meta} schemas={schemas} hideHeader={true}>
   <div class="hero-stage">
     <CalculatorCard
       rates={snapshot.rates}
@@ -115,7 +115,7 @@ const routeLinks = PUBLIC_ROUTES.filter((r) => r.key !== "home" && r.key !== "pr
 
 <style>
   .hero-stage {
-    min-height: calc(100dvh - 57px);
+    min-height: 100dvh;
     display: flex;
     align-items: center;
     justify-content: center;

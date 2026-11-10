@@ -32,7 +32,6 @@ const foreignFormatted = formatNumber(initialState.foreignCents / 100);
 const updatedLabel = activeRate
   ? formatCaracasTimestamp(activeRate.effectiveDate)
   : "Sin conexión";
-const showBcvToggle = Boolean(activeRate && activeRate.hasNextRate && activeRate.nextRate !== null);
 ---
 
 <section
@@ -220,36 +219,6 @@ const showBcvToggle = Boolean(activeRate && activeRate.hasNextRate && activeRate
             );
           })
         }
-      </div>
-
-      <!-- BCV Effective Today vs Next BCV Rate preview switcher -->
-      <div class="bcv-toggle-wrap" data-bcv-toggle-wrap hidden={!showBcvToggle}>
-        <button
-          type="button"
-          class="bcv-toggle-btn is-selected"
-          data-bcv-mode="current"
-          aria-pressed="true"
-        >
-          <span class="bcv-toggle-label">Vigente hoy</span>
-          <span class="bcv-toggle-rate" data-bcv-current-rate>
-            {activeRate ? formatCurrency(activeRate.effectiveRate, "Bs") : ""}
-          </span>
-        </button>
-        <button
-          type="button"
-          class="bcv-toggle-btn"
-          data-bcv-mode="next"
-          aria-pressed="false"
-        >
-          <span class="bcv-toggle-label">Próxima tasa BCV</span>
-          <span class="bcv-toggle-rate" data-bcv-next-rate>
-            {
-              activeRate && activeRate.nextRate !== null
-                ? formatCurrency(activeRate.nextRate, "Bs")
-                : ""
-            }
-          </span>
-        </button>
       </div>
 
       <button
@@ -652,50 +621,6 @@ const showBcvToggle = Boolean(activeRate && activeRate.hasNextRate && activeRate
   .calc-shell :global(.source-card.is-active .source-name),
   .calc-shell :global(.source-card.is-active .source-rate) {
     color: #ffffff;
-  }
-
-  .bcv-toggle-wrap[hidden] {
-    display: none;
-  }
-
-  .bcv-toggle-wrap {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.5rem;
-    margin-top: 0.25rem;
-  }
-
-  .bcv-toggle-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.125rem;
-    padding: 0.5rem 0.625rem;
-    border-radius: 9px;
-    border: 1px solid var(--cr-border);
-    background-color: var(--cr-bg-secondary);
-    color: var(--cr-text-secondary);
-    font-family: inherit;
-    cursor: pointer;
-  }
-
-  .bcv-toggle-btn.is-selected {
-    border-color: var(--cr-primary);
-    background-color: color-mix(in srgb, var(--cr-primary) 10%, var(--cr-bg-secondary));
-    color: var(--cr-text);
-  }
-
-  .bcv-toggle-label {
-    font-size: 0.75rem;
-    font-weight: 600;
-  }
-
-  .bcv-toggle-rate {
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--cr-primary);
-    font-variant-numeric: tabular-nums;
   }
 
   .trend-btn[hidden] {

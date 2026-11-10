@@ -6,12 +6,11 @@ import {
   toCents,
 } from "@/lib/rates/calculator";
 import { getCurrencyDisplaySuffix, getCurrencyTargetLabel } from "@/lib/rates/format";
-import type { HistoryPoint, HistorySeries, RateDisplayMode, ResolvedRate } from "@/lib/rates/types";
+import type { HistoryPoint, HistorySeries, ResolvedRate } from "@/lib/rates/types";
 
 export interface CalculatorState {
   rates: ResolvedRate[];
   selectedCurrencyId: number;
-  bcvMode: RateDisplayMode;
   bsCents: number;
   foreignCents: number;
   lastEdited: "bs" | "foreign";
@@ -27,20 +26,12 @@ export function getSelectedRate(state: CalculatorState): ResolvedRate | null {
 
 export function getActiveRateValue(state: CalculatorState): number {
   const rate = getSelectedRate(state);
-  if (!rate) return 0;
-  if (state.bcvMode === "next" && rate.hasNextRate && rate.nextRate !== null) {
-    return rate.nextRate;
-  }
-  return rate.effectiveRate;
+  return rate ? rate.effectiveRate : 0;
 }
 
 export function getActiveRateDate(state: CalculatorState): string | null {
   const rate = getSelectedRate(state);
-  if (!rate) return null;
-  if (state.bcvMode === "next" && rate.hasNextRate && rate.nextDate) {
-    return rate.nextDate;
-  }
-  return rate.effectiveDate;
+  return rate ? rate.effectiveDate : null;
 }
 
 export function getActiveCurrencyMeta(state: CalculatorState): {
@@ -97,7 +88,6 @@ export function createCalculatorState(
   return {
     rates,
     selectedCurrencyId: selectedId,
-    bcvMode: "current",
     foreignCents: activeRate > 0 ? 100 : 0,
     bsCents: activeRate > 0 ? toCents(convertAmount(1, activeRate, "foreignToBs")) : 0,
     lastEdited: "foreign",
@@ -177,17 +167,6 @@ export function selectSource(
   return recalculateFromLastEdited({
     ...state,
     selectedCurrencyId: currencyId,
-    bcvMode: "current",
-  });
-}
-
-export function setBcvDisplayMode(
-  state: CalculatorState,
-  mode: RateDisplayMode,
-): CalculatorState {
-  return recalculateFromLastEdited({
-    ...state,
-    bcvMode: mode,
   });
 }
 

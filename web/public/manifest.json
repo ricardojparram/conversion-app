@@ -1,4 +1,5 @@
 {
+  "id": "/",
   "short_name": "Cambio rápido",
   "name": "Cambio rápido — Calculadora Dólar BCV, Euro y USDT",
   "description": "Calculadora y monitor de tasas de cambio en Venezuela: Dólar BCV, Euro BCV y USDT Binance P2P.",
@@ -18,7 +19,13 @@
       "src": "/icon-512.png",
       "type": "image/png",
       "sizes": "512x512",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
     }
   ],
   "start_url": "/",

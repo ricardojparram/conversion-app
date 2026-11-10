@@ -11,9 +11,10 @@ import Footer from "@/components/Footer.astro";
 interface Props {
   meta: PageMeta;
   schemas?: Record<string, unknown>[];
+  hideHeader?: boolean;
 }
 
-const { meta, schemas = [] } = Astro.props;
+const { meta, schemas = [], hideHeader = false } = Astro.props;
 ---
 
 <!doctype html>
@@ -75,7 +76,7 @@ const { meta, schemas = [] } = Astro.props;
       Ir al contenido principal
     </a>
 
-    <Navbar activeRoute={meta.routeKey} />
+    {!hideHeader && <Navbar activeRoute={meta.routeKey} />}
 
     <main id="main-content" tabindex="-1" class="flex-1 w-full">
       <slot />
@@ -91,8 +92,10 @@ const { meta, schemas = [] } = Astro.props;
     ></div>
 
     <script>
+      import { initPwa } from "@/scripts/pwa";
       import { initThemeToggle } from "@/scripts/theme";
       initThemeToggle();
+      initPwa();
     </script>
   </body>
 </html>

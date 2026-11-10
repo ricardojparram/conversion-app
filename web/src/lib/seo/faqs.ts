@@ -14,9 +14,9 @@ const HOME_FAQS: FaqItem[] = [
     category: "General",
   },
   {
-    question: "¿Qué significa cuando aparece «Vigente hoy» y «Próxima tasa BCV»?",
+    question: "¿Cuándo entra en vigencia una nueva tasa publicada por el BCV?",
     answer:
-      "Cuando el BCV publica un nuevo tipo de cambio en la tarde para el siguiente día hábil bancario (fecha valor), la app mantiene activa la tasa vigente hasta la medianoche hora de Caracas y te permite previsualizar la próxima tasa oficial.",
+      "Cuando el BCV publica un nuevo tipo de cambio en la tarde para el siguiente día hábil bancario (fecha valor), la calculadora mantiene activa la tasa vigente hasta la medianoche hora de Caracas y cambia automáticamente a la nueva tasa oficial. También puedes consultar el valor anunciado en nuestras páginas de Dólar BCV y Euro BCV.",
     category: "BCV",
   },
   {

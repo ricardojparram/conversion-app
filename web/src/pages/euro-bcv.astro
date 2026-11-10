@@ -70,8 +70,8 @@ const eurBcv = snapshot.rates.find((r) => r.currencyId === 2) ?? null;
           {eurBcv.hasNextRate && eurBcv.nextRate !== null && eurBcv.nextDate && (
             <p class="next-rate-pill">
               Próxima tasa Euro BCV publicada:{" "}
-              <strong>{formatCurrency(eurBcv.nextRate, "Bs")}</strong> (fecha valor:{" "}
-              {formatCaracasTimestamp(eurBcv.nextDate)}).
+              <strong>{formatCurrency(eurBcv.nextRate, "Bs")}</strong> (entra en vigencia el{" "}
+              {formatCaracasTimestamp(eurBcv.nextDate)} automáticamente).
             </p>
           )}
         </section>

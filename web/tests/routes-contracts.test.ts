@@ -162,4 +162,35 @@ describe("routes, endpoints, and SEO/MWG structural contracts", () => {
     expect(historyJson.days).toBe(60);
     expect(historyJson.currencyIds).toEqual([1, 3]);
   });
+
+  it("hides header on home, removes BCV switcher from CalculatorCard, and places theme + PWA controls in Footer/BaseLayout", () => {
+    const homeAstro = fs.readFileSync(path.join(PAGES_DIR, "index.astro"), "utf-8");
+    expect(homeAstro).toMatch(/hideHeader=\{true\}/);
+    expect(homeAstro).toContain("min-height: 100dvh");
+
+    const calcAstro = fs.readFileSync(
+      path.join(COMPONENTS_DIR, "CalculatorCard.astro"),
+      "utf-8",
+    );
+    expect(calcAstro).not.toContain("data-bcv-toggle-wrap");
+    expect(calcAstro).not.toContain("data-bcv-mode");
+
+    const navbarAstro = fs.readFileSync(path.join(COMPONENTS_DIR, "Navbar.astro"), "utf-8");
+    expect(navbarAstro).not.toContain("data-theme-toggle");
+
+    const footerAstro = fs.readFileSync(path.join(COMPONENTS_DIR, "Footer.astro"), "utf-8");
+    expect(footerAstro).toContain("data-theme-toggle");
+    expect(footerAstro).toContain("data-pwa-install");
+    expect(footerAstro).toContain("data-pwa-ios-hint");
+
+    const layoutAstro = fs.readFileSync(
+      path.join(SRC_DIR, "layouts", "BaseLayout.astro"),
+      "utf-8",
+    );
+    expect(layoutAstro).toContain("hideHeader");
+    expect(layoutAstro).toContain("initPwa");
+
+    const dolarAstro = fs.readFileSync(path.join(PAGES_DIR, "dolar-bcv.astro"), "utf-8");
+    expect(dolarAstro).not.toContain("directo en la calculadora superior");
+  });
 });
