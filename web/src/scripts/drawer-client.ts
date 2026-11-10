@@ -60,6 +60,7 @@ export function initHistoryDrawer(): void {
       "touchstart",
       (event) => {
         if (event.touches.length !== 1) return;
+        if ((event.target as HTMLElement)?.closest("[data-dialog-close]")) return;
         startY = event.touches[0].clientY;
         deltaY = 0;
         dragging = true;

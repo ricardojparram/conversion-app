@@ -156,7 +156,7 @@ body {
   text-decoration: none;
 }
 
-:where(a:any-link, button, summary, input, [tabindex]):focus-visible {
+:where(a:any-link, button, summary, input, [tabindex="0"]):focus-visible {
   outline: 3px solid var(--cr-primary);
   outline-offset: 2px;
 }
