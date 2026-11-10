@@ -1,0 +1,198 @@
+---
+import Breadcrumbs from "@/components/Breadcrumbs.astro";
+import CalculatorCard from "@/components/CalculatorCard.astro";
+import EquivalenceTable from "@/components/EquivalenceTable.astro";
+import FaqSection from "@/components/FaqSection.astro";
+import RateHistoryDrawer from "@/components/RateHistoryDrawer.astro";
+import RateHistoryPanel from "@/components/RateHistoryPanel.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { formatCaracasTimestamp } from "@/lib/rates/caracas-date";
+import { formatCurrency } from "@/lib/rates/format";
+import { fetchRatesHistory } from "@/lib/rates/history";
+import { fetchLatestRatesSnapshot } from "@/lib/rates/supabase";
+import { getFaqsForRoute } from "@/lib/seo/faqs";
+import { buildPageMeta } from "@/lib/seo/meta";
+import { buildStructuredData, type BreadcrumbItem } from "@/lib/seo/schema";
+
+export const prerender = false;
+
+const [snapshot, history] = await Promise.all([
+  fetchLatestRatesSnapshot(),
+  fetchRatesHistory([1], 7),
+]);
+
+if (!snapshot.ok) {
+  Astro.response.headers.set("Cache-Control", "public, max-age=0, must-revalidate");
+}
+
+const breadcrumbs: BreadcrumbItem[] = [
+  { name: "Inicio", path: "/" },
+  { name: "Dólar BCV hoy", path: "/dolar-bcv" },
+];
+
+const meta = buildPageMeta("dolar-bcv", snapshot.rates);
+const faqs = getFaqsForRoute("dolar-bcv");
+const schemas = buildStructuredData({
+  routeKey: "dolar-bcv",
+  meta,
+  breadcrumbs,
+  faqs,
+  updatedAtIso: snapshot.updatedAtIso,
+});
+
+const usdBcv = snapshot.rates.find((r) => r.currencyId === 1) ?? null;
+---
+
+<BaseLayout meta={meta} schemas={schemas}>
+  <Breadcrumbs items={breadcrumbs} />
+
+  <div class="subroute-hero">
+    <CalculatorCard
+      rates={snapshot.rates}
+      initialCurrencyId={1}
+      cardTitle="Dólar BCV hoy"
+      asH1={true}
+    />
+  </div>
+
+  <div class="below-fold-container">
+    {
+      usdBcv && (
+        <section class="info-card" aria-labelledby="bcv-validity-heading">
+          <h2 id="bcv-validity-heading" class="section-heading">
+            Resumen oficial BCV y fecha valor
+          </h2>
+          <p class="section-text">
+            La tasa oficial del <strong>Dólar del Banco Central de Venezuela (BCV)</strong> vigente hoy es{" "}
+            <strong>{formatCurrency(usdBcv.effectiveRate, "Bs")}</strong> (actualizada:{" "}
+            {formatCaracasTimestamp(usdBcv.effectiveDate)}).
+          </p>
+          {usdBcv.hasNextRate && usdBcv.nextRate !== null && usdBcv.nextDate && (
+            <p class="next-rate-pill">
+              Próxima tasa BCV anunciada:{" "}
+              <strong>{formatCurrency(usdBcv.nextRate, "Bs")}</strong> (fecha valor:{" "}
+              {formatCaracasTimestamp(usdBcv.nextDate)}). Puedes alternar ambos valores directo en la calculadora superior.
+            </p>
+          )}
+        </section>
+      )
+    }
+
+    <section class="seo-section" aria-labelledby="bcv-eq-heading">
+      <h2 id="bcv-eq-heading" class="section-heading">
+        Equivalencias de Dólar BCV a Bolívares
+      </h2>
+      <EquivalenceTable
+        id="bcv-eq-caption"
+        caption="Montos comunes convertidos al Dólar oficial BCV de hoy"
+        focusRate={usdBcv}
+      />
+    </section>
+
+    <section class="info-card" aria-labelledby="bcv-trend-heading">
+      <h2 id="bcv-trend-heading" class="section-heading">
+        Fluctuación del Dólar BCV últimos 7 días
+      </h2>
+      <RateHistoryPanel
+        id="bcv-page-history"
+        rates={snapshot.rates}
+        initialCurrencyId={1}
+        defaultDays={7}
+        defaultSources={[1]}
+        initialHistory={history.series}
+        autoInit={true}
+        showFullPageLink={true}
+      />
+    </section>
+
+    <FaqSection faqs={faqs} title="Preguntas frecuentes sobre el Dólar BCV" />
+
+    <nav aria-label="Páginas relacionadas" class="cross-links">
+      <a href="/euro-bcv" class="cross-link-btn">Ver tasa Euro BCV hoy →</a>
+      <a href="/usdt-binance" class="cross-link-btn">Ver tasa USDT Binance P2P →</a>
+      <a href="/brecha-cambiaria" class="cross-link-btn">Calcular brecha BCV vs USDT →</a>
+    </nav>
+  </div>
+
+  <RateHistoryDrawer rates={snapshot.rates} initialCurrencyId={1} />
+</BaseLayout>
+
+<style>
+  .subroute-hero {
+    padding-block: 0.75rem 1.75rem;
+  }
+
+  .below-fold-container {
+    max-width: 820px;
+    margin-inline: auto;
+    padding: 0 1rem 3.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .seo-section,
+  .info-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+  }
+
+  .info-card {
+    padding: 1.25rem;
+    border-radius: 14px;
+    border: 1px solid var(--cr-border);
+    background-color: var(--cr-bg-secondary);
+  }
+
+  .section-heading {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--cr-text);
+  }
+
+  .section-text {
+    margin: 0;
+    font-size: 0.9375rem;
+    line-height: 1.65;
+    color: var(--cr-text-secondary);
+  }
+
+  .section-text strong {
+    color: var(--cr-text);
+  }
+
+  .next-rate-pill {
+    margin: 0;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    border: 1px solid var(--cr-primary);
+    background-color: color-mix(in srgb, var(--cr-primary) 10%, var(--cr-bg));
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--cr-text);
+  }
+
+  .cross-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .cross-link-btn {
+    padding: 0.5625rem 0.9375rem;
+    border-radius: 10px;
+    border: 1px solid var(--cr-border);
+    background-color: var(--cr-bg-secondary);
+    color: var(--cr-primary);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .cross-link-btn:hover {
+    border-color: var(--cr-primary);
+    background-color: var(--cr-bg-focus);
+  }
+</style>

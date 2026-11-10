@@ -1,0 +1,289 @@
+---
+import { convertAmount } from "@/lib/rates/calculator";
+import { formatCurrency, formatNumber, getCurrencyDisplaySuffix } from "@/lib/rates/format";
+import type { ResolvedRate } from "@/lib/rates/types";
+
+interface Props {
+  id?: string;
+  caption: string;
+  rates?: ResolvedRate[];
+  focusRate?: ResolvedRate | null;
+  amounts?: number[];
+}
+
+const {
+  id = "cr-equiv-table",
+  caption,
+  rates = [],
+  focusRate = null,
+  amounts = [1, 5, 10, 20, 50, 100, 500, 1000],
+} = Astro.props;
+
+const usdBcv = rates.find((r) => r.currencyId === 1) ?? null;
+const eurBcv = rates.find((r) => r.currencyId === 2) ?? null;
+const usdtSell = rates.find((r) => r.currencyId === 3) ?? null;
+
+const isSingleMode = Boolean(focusRate);
+const columns = isSingleMode && focusRate
+  ? [
+      `Monto (${getCurrencyDisplaySuffix(focusRate)})`,
+      "Equivalente en Bolívares",
+      ...(focusRate.hasNextRate && focusRate.nextRate !== null
+        ? ["Con próxima tasa BCV"]
+        : []),
+    ]
+  : [
+      "Monto",
+      ...(usdBcv ? ["Dólar BCV (Bs)"] : []),
+      ...(eurBcv ? ["Euro BCV (Bs)"] : []),
+      ...(usdtSell ? ["USDT Venta (Bs)"] : []),
+    ];
+
+const labelCssVars = columns
+  .map((col, idx) => `--col-${idx + 1}: "${col.replace(/"/g, '\\"')}";`)
+  .join(" ");
+
+const hasRows = isSingleMode
+  ? Boolean(focusRate && focusRate.effectiveRate > 0)
+  : Boolean(usdBcv || eurBcv || usdtSell);
+---
+
+<div class="eq-section">
+  {
+    hasRows ? (
+      <div
+        tabindex="0"
+        role="region"
+        aria-labelledby={id}
+        class="table-wrapper"
+        style={labelCssVars}
+      >
+        <table>
+          <caption id={id} class="table-caption">
+            {caption}
+          </caption>
+          <thead>
+            <tr>
+              {columns.map((col) => (
+                <th scope="col">{col}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {isSingleMode && focusRate ? (
+              amounts.map((amt) => {
+                const suffix = getCurrencyDisplaySuffix(focusRate);
+                const bsNow = convertAmount(amt, focusRate.effectiveRate, "foreignToBs");
+                const bsNext =
+                  focusRate.hasNextRate && focusRate.nextRate !== null
+                    ? convertAmount(amt, focusRate.nextRate, "foreignToBs")
+                    : null;
+                return (
+                  <tr>
+                    <th scope="row">
+                      {formatNumber(amt, { precision: 0 })} {suffix}
+                    </th>
+                    <td>{formatCurrency(bsNow, "Bs")}</td>
+                    {bsNext !== null && <td>{formatCurrency(bsNext, "Bs")}</td>}
+                  </tr>
+                );
+              })
+            ) : (
+              amounts.map((amt) => (
+                <tr>
+                  <th scope="row">{formatNumber(amt, { precision: 0 })} $ / €</th>
+                  {usdBcv && (
+                    <td>
+                      {formatCurrency(
+                        convertAmount(amt, usdBcv.effectiveRate, "foreignToBs"),
+                        "Bs",
+                      )}
+                    </td>
+                  )}
+                  {eurBcv && (
+                    <td>
+                      {formatCurrency(
+                        convertAmount(amt, eurBcv.effectiveRate, "foreignToBs"),
+                        "Bs",
+                      )}
+                    </td>
+                  )}
+                  {usdtSell && (
+                    <td>
+                      {formatCurrency(
+                        convertAmount(amt, usdtSell.effectiveRate, "foreignToBs"),
+                        "Bs",
+                      )}
+                    </td>
+                  )}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    ) : (
+      <p class="table-empty">
+        La tabla de equivalencias estará disponible cuando se carguen las tasas actuales.
+      </p>
+    )
+  }
+</div>
+
+<style>
+  .eq-section {
+    width: 100%;
+  }
+
+  .table-wrapper {
+    overflow: auto;
+    max-inline-size: 100%;
+    max-block-size: min(520px, 75vh);
+    container-type: inline-size;
+    border: 1px solid var(--cr-border);
+    border-radius: 12px;
+    background-color: var(--cr-bg-secondary);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.9375rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .table-caption {
+    padding: 0.875rem 1rem 0.625rem;
+    text-align: left;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--cr-text);
+    background-color: var(--cr-bg-secondary);
+    border-bottom: 1px solid var(--cr-border);
+  }
+
+  thead {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 1;
+    background-color: var(--cr-bg-focus);
+  }
+
+  th,
+  td {
+    padding: 0.6875rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--cr-border);
+    white-space: nowrap;
+  }
+
+  thead th {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--cr-text-secondary);
+  }
+
+  tbody th {
+    position: sticky;
+    inset-inline-start: 0;
+    background-color: var(--cr-bg-secondary);
+    font-weight: 600;
+    color: var(--cr-primary);
+  }
+
+  tbody td {
+    color: var(--cr-text);
+    font-weight: 500;
+  }
+
+  tbody tr:last-child th,
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .table-empty {
+    margin: 0;
+    padding: 1rem;
+    border: 1px solid var(--cr-border);
+    border-radius: 12px;
+    background-color: var(--cr-bg-secondary);
+    color: var(--cr-text-secondary);
+    font-size: 0.875rem;
+  }
+
+  @container (width < 520px) {
+    .table-wrapper {
+      border: 0;
+      background: transparent;
+      max-block-size: none;
+      overflow: visible;
+    }
+
+    table,
+    thead,
+    tbody,
+    tr,
+    th,
+    td {
+      display: block;
+    }
+
+    .table-caption {
+      border: 0;
+      padding: 0 0 0.75rem;
+      background: transparent;
+    }
+
+    thead {
+      display: none;
+    }
+
+    tr {
+      margin-block-end: 0.75rem;
+      border: 1px solid var(--cr-border);
+      border-radius: 10px;
+      overflow: hidden;
+      background-color: var(--cr-bg-secondary);
+    }
+
+    tbody th {
+      position: sticky;
+      inset-block-start: 0;
+      z-index: 2;
+      background-color: var(--cr-bg-focus);
+      border-bottom: 1px solid var(--cr-border);
+    }
+
+    td {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      white-space: normal;
+      border-bottom: 1px solid var(--cr-border);
+    }
+
+    td::before {
+      color: var(--cr-text-secondary);
+      font-size: 0.8125rem;
+      font-weight: 600;
+    }
+
+    td:nth-child(2)::before {
+      content: var(--col-2) ": ";
+    }
+
+    td:nth-child(3)::before {
+      content: var(--col-3) ": ";
+    }
+
+    td:nth-child(4)::before {
+      content: var(--col-4) ": ";
+    }
+
+    tbody tr td:last-child {
+      border-bottom: 0;
+    }
+  }
+</style>

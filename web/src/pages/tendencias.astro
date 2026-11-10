@@ -1,0 +1,357 @@
+---
+import Breadcrumbs from "@/components/Breadcrumbs.astro";
+import FaqSection from "@/components/FaqSection.astro";
+import RateHistoryPanel from "@/components/RateHistoryPanel.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { calculateBrecha } from "@/lib/rates/brecha";
+import { formatSimpleCaracasDate } from "@/lib/rates/caracas-date";
+import { formatCurrency, formatNumber } from "@/lib/rates/format";
+import { fetchRatesHistory } from "@/lib/rates/history";
+import { fetchLatestRatesSnapshot } from "@/lib/rates/supabase";
+import { getFaqsForRoute } from "@/lib/seo/faqs";
+import { buildPageMeta } from "@/lib/seo/meta";
+import { buildStructuredData, type BreadcrumbItem } from "@/lib/seo/schema";
+
+export const prerender = false;
+
+const [snapshot, history] = await Promise.all([
+  fetchLatestRatesSnapshot(),
+  fetchRatesHistory([1, 2, 3, 4], 30),
+]);
+
+if (!snapshot.ok) {
+  Astro.response.headers.set("Cache-Control", "public, max-age=0, must-revalidate");
+}
+
+const breadcrumbs: BreadcrumbItem[] = [
+  { name: "Inicio", path: "/" },
+  { name: "Tendencias e historial", path: "/tendencias" },
+];
+
+const meta = buildPageMeta("tendencias", snapshot.rates);
+const faqs = getFaqsForRoute("tendencias");
+const schemas = buildStructuredData({
+  routeKey: "tendencias",
+  meta,
+  breadcrumbs,
+  faqs,
+  updatedAtIso: snapshot.updatedAtIso,
+});
+
+// Build merged daily Caracas rows for accessible & indexable HTML table
+const dailyMaps = new Map<
+  string,
+  { bcvUsd?: number; bcvEur?: number; usdtSell?: number; usdtBuy?: number }
+>();
+
+for (const [idStr, key] of [
+  ["1", "bcvUsd"],
+  ["2", "bcvEur"],
+  ["3", "usdtSell"],
+  ["4", "usdtBuy"],
+] as const) {
+  const pts = history.series[Number(idStr)] ?? [];
+  for (const pt of pts) {
+    const existing = dailyMaps.get(pt.date) ?? {};
+    existing[key] = pt.rate;
+    dailyMaps.set(pt.date, existing);
+  }
+}
+
+const dailyRows = Array.from(dailyMaps.entries())
+  .sort(([a], [b]) => b.localeCompare(a))
+  .slice(0, 30)
+  .map(([date, values]) => {
+    const brechaPct =
+      values.bcvUsd && values.usdtSell
+        ? calculateBrecha(values.bcvUsd, values.usdtSell, 1).percentage
+        : null;
+    return { date, ...values, brechaPct };
+  });
+
+const defaultSources = snapshot.rates
+  .map((r) => r.currencyId)
+  .filter((id) => (history.series[id] ?? []).length > 0);
+---
+
+<BaseLayout meta={meta} schemas={schemas}>
+  <Breadcrumbs items={breadcrumbs} />
+
+  <div class="page-container">
+    <header class="page-hero">
+      <h1 class="page-h1">Historial y Tendencias del Dólar BCV y USDT</h1>
+      <p class="page-lead">
+        Compara la evolución de los últimos 7, 15 y 30 días en horario oficial de Caracas (America/Caracas) entre BCV Dólar, Euro BCV y USDT Binance P2P.
+      </p>
+    </header>
+
+    <section class="chart-card" aria-labelledby="tendencias-chart-heading">
+      <h2 id="tendencias-chart-heading" class="section-heading">
+        Gráfico interactivo por rango y fuente
+      </h2>
+      <RateHistoryPanel
+        id="tendencias-history-panel"
+        rates={snapshot.rates}
+        initialCurrencyId={1}
+        defaultDays={30}
+        defaultSources={defaultSources.length > 0 ? defaultSources : [1, 3]}
+        initialHistory={history.series}
+        autoInit={true}
+      />
+    </section>
+
+    <section class="seo-section" aria-labelledby="tendencias-table-heading">
+      <h2 id="tendencias-table-heading" class="section-heading">
+        Tabla de promedios diarios (últimos 30 días)
+      </h2>
+
+      {
+        dailyRows.length > 0 ? (
+          <div
+            tabindex="0"
+            role="region"
+            aria-labelledby="tendencias-table-caption"
+            class="table-wrapper"
+            style='--col-2: "Dólar BCV"; --col-3: "Euro BCV"; --col-4: "USDT Venta"; --col-5: "Brecha";'
+          >
+            <table>
+              <caption id="tendencias-table-caption" class="table-caption">
+                Promedios diarios en Bolívares agrupados por fecha calendario de Caracas
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Fecha</th>
+                  <th scope="col">Dólar BCV</th>
+                  <th scope="col">Euro BCV</th>
+                  <th scope="col">USDT Venta</th>
+                  <th scope="col">Brecha</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dailyRows.map((row) => (
+                  <tr>
+                    <th scope="row">{formatSimpleCaracasDate(row.date)}</th>
+                    <td>{row.bcvUsd ? formatCurrency(row.bcvUsd, "Bs") : "—"}</td>
+                    <td>{row.bcvEur ? formatCurrency(row.bcvEur, "Bs") : "—"}</td>
+                    <td>{row.usdtSell ? formatCurrency(row.usdtSell, "Bs") : "—"}</td>
+                    <td>
+                      {row.brechaPct !== null ? `${formatNumber(row.brechaPct)}%` : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p class="table-empty">
+            No se pudieron cargar promedios diarios en este momento. Intenta recargar en unos segundos.
+          </p>
+        )
+      }
+    </section>
+
+    <FaqSection faqs={faqs} title="Preguntas frecuentes sobre tendencias históricas" />
+  </div>
+</BaseLayout>
+
+<style>
+  .page-container {
+    max-width: 820px;
+    margin-inline: auto;
+    padding: 1.5rem 1rem 3.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .page-hero {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .page-h1 {
+    margin: 0;
+    font-size: clamp(1.625rem, 4vw, 2.125rem);
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--cr-text);
+  }
+
+  .page-lead {
+    margin: 0;
+    font-size: 0.96875rem;
+    line-height: 1.6;
+    color: var(--cr-text-secondary);
+  }
+
+  .chart-card {
+    padding: 1.25rem;
+    border-radius: 14px;
+    border: 1px solid var(--cr-border);
+    background-color: var(--cr-bg-secondary);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .seo-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+  }
+
+  .section-heading {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--cr-text);
+  }
+
+  .table-wrapper {
+    overflow: auto;
+    max-inline-size: 100%;
+    max-block-size: min(560px, 75vh);
+    container-type: inline-size;
+    border: 1px solid var(--cr-border);
+    border-radius: 12px;
+    background-color: var(--cr-bg-secondary);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.9rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .table-caption {
+    padding: 0.875rem 1rem 0.625rem;
+    text-align: left;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--cr-text);
+    background-color: var(--cr-bg-secondary);
+    border-bottom: 1px solid var(--cr-border);
+  }
+
+  thead {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 1;
+    background-color: var(--cr-bg-focus);
+  }
+
+  th,
+  td {
+    padding: 0.65rem 0.875rem;
+    text-align: left;
+    border-bottom: 1px solid var(--cr-border);
+    white-space: nowrap;
+  }
+
+  thead th {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--cr-text-secondary);
+  }
+
+  tbody th {
+    position: sticky;
+    inset-inline-start: 0;
+    background-color: var(--cr-bg-secondary);
+    color: var(--cr-primary);
+    font-weight: 600;
+  }
+
+  tbody tr:last-child th,
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .table-empty {
+    margin: 0;
+    padding: 1rem;
+    border-radius: 12px;
+    border: 1px solid var(--cr-border);
+    background-color: var(--cr-bg-secondary);
+    color: var(--cr-text-secondary);
+    font-size: 0.875rem;
+  }
+
+  @container (width < 560px) {
+    .table-wrapper {
+      border: 0;
+      background: transparent;
+      max-block-size: none;
+      overflow: visible;
+    }
+
+    table,
+    thead,
+    tbody,
+    tr,
+    th,
+    td {
+      display: block;
+    }
+
+    .table-caption {
+      border: 0;
+      background: transparent;
+      padding: 0 0 0.75rem;
+    }
+
+    thead {
+      display: none;
+    }
+
+    tr {
+      margin-block-end: 0.75rem;
+      border: 1px solid var(--cr-border);
+      border-radius: 10px;
+      overflow: hidden;
+      background-color: var(--cr-bg-secondary);
+    }
+
+    tbody th {
+      position: sticky;
+      inset-block-start: 0;
+      z-index: 2;
+      background-color: var(--cr-bg-focus);
+      border-bottom: 1px solid var(--cr-border);
+    }
+
+    td {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      white-space: normal;
+      border-bottom: 1px solid var(--cr-border);
+    }
+
+    td::before {
+      color: var(--cr-text-secondary);
+      font-size: 0.8125rem;
+      font-weight: 600;
+    }
+
+    td:nth-child(2)::before {
+      content: var(--col-2) ": ";
+    }
+    td:nth-child(3)::before {
+      content: var(--col-3) ": ";
+    }
+    td:nth-child(4)::before {
+      content: var(--col-4) ": ";
+    }
+    td:nth-child(5)::before {
+      content: var(--col-5) ": ";
+    }
+
+    tbody tr td:last-child {
+      border-bottom: 0;
+    }
+  }
+</style>

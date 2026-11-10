@@ -1,0 +1,198 @@
+---
+import Breadcrumbs from "@/components/Breadcrumbs.astro";
+import CalculatorCard from "@/components/CalculatorCard.astro";
+import EquivalenceTable from "@/components/EquivalenceTable.astro";
+import FaqSection from "@/components/FaqSection.astro";
+import RateHistoryDrawer from "@/components/RateHistoryDrawer.astro";
+import RateHistoryPanel from "@/components/RateHistoryPanel.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { formatCaracasTimestamp } from "@/lib/rates/caracas-date";
+import { formatCurrency } from "@/lib/rates/format";
+import { fetchRatesHistory } from "@/lib/rates/history";
+import { fetchLatestRatesSnapshot } from "@/lib/rates/supabase";
+import { getFaqsForRoute } from "@/lib/seo/faqs";
+import { buildPageMeta } from "@/lib/seo/meta";
+import { buildStructuredData, type BreadcrumbItem } from "@/lib/seo/schema";
+
+export const prerender = false;
+
+const [snapshot, history] = await Promise.all([
+  fetchLatestRatesSnapshot(),
+  fetchRatesHistory([2], 7),
+]);
+
+if (!snapshot.ok) {
+  Astro.response.headers.set("Cache-Control", "public, max-age=0, must-revalidate");
+}
+
+const breadcrumbs: BreadcrumbItem[] = [
+  { name: "Inicio", path: "/" },
+  { name: "Euro BCV hoy", path: "/euro-bcv" },
+];
+
+const meta = buildPageMeta("euro-bcv", snapshot.rates);
+const faqs = getFaqsForRoute("euro-bcv");
+const schemas = buildStructuredData({
+  routeKey: "euro-bcv",
+  meta,
+  breadcrumbs,
+  faqs,
+  updatedAtIso: snapshot.updatedAtIso,
+});
+
+const eurBcv = snapshot.rates.find((r) => r.currencyId === 2) ?? null;
+---
+
+<BaseLayout meta={meta} schemas={schemas}>
+  <Breadcrumbs items={breadcrumbs} />
+
+  <div class="subroute-hero">
+    <CalculatorCard
+      rates={snapshot.rates}
+      initialCurrencyId={2}
+      cardTitle="Euro BCV hoy"
+      asH1={true}
+    />
+  </div>
+
+  <div class="below-fold-container">
+    {
+      eurBcv && (
+        <section class="info-card" aria-labelledby="euro-validity-heading">
+          <h2 id="euro-validity-heading" class="section-heading">
+            Tasa oficial Euro BCV vigente en Venezuela
+          </h2>
+          <p class="section-text">
+            El tipo de cambio oficial del <strong>Euro BCV (€)</strong> vigente hoy es{" "}
+            <strong>{formatCurrency(eurBcv.effectiveRate, "Bs")}</strong> (actualizado:{" "}
+            {formatCaracasTimestamp(eurBcv.effectiveDate)}).
+          </p>
+          {eurBcv.hasNextRate && eurBcv.nextRate !== null && eurBcv.nextDate && (
+            <p class="next-rate-pill">
+              Próxima tasa Euro BCV publicada:{" "}
+              <strong>{formatCurrency(eurBcv.nextRate, "Bs")}</strong> (fecha valor:{" "}
+              {formatCaracasTimestamp(eurBcv.nextDate)}).
+            </p>
+          )}
+        </section>
+      )
+    }
+
+    <section class="seo-section" aria-labelledby="euro-eq-heading">
+      <h2 id="euro-eq-heading" class="section-heading">
+        Equivalencias de Euros BCV a Bolívares
+      </h2>
+      <EquivalenceTable
+        id="euro-eq-caption"
+        caption="Conversión de montos frecuentes en Euros oficiales BCV a Bolívares"
+        focusRate={eurBcv}
+      />
+    </section>
+
+    <section class="info-card" aria-labelledby="euro-trend-heading">
+      <h2 id="euro-trend-heading" class="section-heading">
+        Variación del Euro BCV últimos 7 días
+      </h2>
+      <RateHistoryPanel
+        id="euro-page-history"
+        rates={snapshot.rates}
+        initialCurrencyId={2}
+        defaultDays={7}
+        defaultSources={[2]}
+        initialHistory={history.series}
+        autoInit={true}
+        showFullPageLink={true}
+      />
+    </section>
+
+    <FaqSection faqs={faqs} title="Preguntas frecuentes sobre el Euro BCV" />
+
+    <nav aria-label="Páginas relacionadas" class="cross-links">
+      <a href="/dolar-bcv" class="cross-link-btn">Ver Dólar BCV hoy →</a>
+      <a href="/usdt-binance" class="cross-link-btn">Ver USDT Binance P2P →</a>
+      <a href="/tendencias" class="cross-link-btn">Comparar 30 días en Tendencias →</a>
+    </nav>
+  </div>
+
+  <RateHistoryDrawer rates={snapshot.rates} initialCurrencyId={2} />
+</BaseLayout>
+
+<style>
+  .subroute-hero {
+    padding-block: 0.75rem 1.75rem;
+  }
+
+  .below-fold-container {
+    max-width: 820px;
+    margin-inline: auto;
+    padding: 0 1rem 3.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .seo-section,
+  .info-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+  }
+
+  .info-card {
+    padding: 1.25rem;
+    border-radius: 14px;
+    border: 1px solid var(--cr-border);
+    background-color: var(--cr-bg-secondary);
+  }
+
+  .section-heading {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--cr-text);
+  }
+
+  .section-text {
+    margin: 0;
+    font-size: 0.9375rem;
+    line-height: 1.65;
+    color: var(--cr-text-secondary);
+  }
+
+  .section-text strong {
+    color: var(--cr-text);
+  }
+
+  .next-rate-pill {
+    margin: 0;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    border: 1px solid var(--cr-primary);
+    background-color: color-mix(in srgb, var(--cr-primary) 10%, var(--cr-bg));
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--cr-text);
+  }
+
+  .cross-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .cross-link-btn {
+    padding: 0.5625rem 0.9375rem;
+    border-radius: 10px;
+    border: 1px solid var(--cr-border);
+    background-color: var(--cr-bg-secondary);
+    color: var(--cr-primary);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .cross-link-btn:hover {
+    border-color: var(--cr-primary);
+    background-color: var(--cr-bg-focus);
+  }
+</style>

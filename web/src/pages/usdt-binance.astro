@@ -1,0 +1,230 @@
+---
+import Breadcrumbs from "@/components/Breadcrumbs.astro";
+import CalculatorCard from "@/components/CalculatorCard.astro";
+import EquivalenceTable from "@/components/EquivalenceTable.astro";
+import FaqSection from "@/components/FaqSection.astro";
+import RateHistoryDrawer from "@/components/RateHistoryDrawer.astro";
+import RateHistoryPanel from "@/components/RateHistoryPanel.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { formatCaracasTimestamp } from "@/lib/rates/caracas-date";
+import { formatCurrency } from "@/lib/rates/format";
+import { fetchRatesHistory } from "@/lib/rates/history";
+import { fetchLatestRatesSnapshot } from "@/lib/rates/supabase";
+import { getFaqsForRoute } from "@/lib/seo/faqs";
+import { buildPageMeta } from "@/lib/seo/meta";
+import { buildStructuredData, type BreadcrumbItem } from "@/lib/seo/schema";
+
+export const prerender = false;
+
+const [snapshot, history] = await Promise.all([
+  fetchLatestRatesSnapshot(),
+  fetchRatesHistory([3, 4], 7),
+]);
+
+if (!snapshot.ok) {
+  Astro.response.headers.set("Cache-Control", "public, max-age=0, must-revalidate");
+}
+
+const breadcrumbs: BreadcrumbItem[] = [
+  { name: "Inicio", path: "/" },
+  { name: "USDT Binance hoy", path: "/usdt-binance" },
+];
+
+const meta = buildPageMeta("usdt-binance", snapshot.rates);
+const faqs = getFaqsForRoute("usdt-binance");
+const schemas = buildStructuredData({
+  routeKey: "usdt-binance",
+  meta,
+  breadcrumbs,
+  faqs,
+  updatedAtIso: snapshot.updatedAtIso,
+});
+
+const usdtSell = snapshot.rates.find((r) => r.currencyId === 3) ?? null;
+const usdtBuy = snapshot.rates.find((r) => r.currencyId === 4) ?? null;
+---
+
+<BaseLayout meta={meta} schemas={schemas}>
+  <Breadcrumbs items={breadcrumbs} />
+
+  <div class="subroute-hero">
+    <CalculatorCard
+      rates={snapshot.rates}
+      initialCurrencyId={3}
+      cardTitle="USDT Binance hoy"
+      asH1={true}
+    />
+  </div>
+
+  <div class="below-fold-container">
+    {
+      (usdtSell || usdtBuy) && (
+        <section class="info-card" aria-labelledby="usdt-pair-heading">
+          <h2 id="usdt-pair-heading" class="section-heading">
+            Referencias Binance P2P: Venta y Compra en Bolívares
+          </h2>
+          <div class="p2p-grid">
+            {usdtSell && (
+              <div class="p2p-box">
+                <span class="p2p-label">USDT Venta (Promedio P2P)</span>
+                <strong class="p2p-val is-sell">
+                  {formatCurrency(usdtSell.effectiveRate, "Bs")}
+                </strong>
+                <span class="p2p-time">
+                  Actualizado: {formatCaracasTimestamp(usdtSell.effectiveDate)}
+                </span>
+              </div>
+            )}
+            {usdtBuy && (
+              <div class="p2p-box">
+                <span class="p2p-label">USDT Compra (Promedio P2P)</span>
+                <strong class="p2p-val is-buy">
+                  {formatCurrency(usdtBuy.effectiveRate, "Bs")}
+                </strong>
+                <span class="p2p-time">
+                  Actualizado: {formatCaracasTimestamp(usdtBuy.effectiveDate)}
+                </span>
+              </div>
+            )}
+          </div>
+        </section>
+      )
+    }
+
+    <section class="seo-section" aria-labelledby="usdt-eq-heading">
+      <h2 id="usdt-eq-heading" class="section-heading">
+        Equivalencias de USDT a Bolívares
+      </h2>
+      <EquivalenceTable
+        id="usdt-eq-caption"
+        caption="Conversión referencial de USDT Venta en Binance P2P a Bolívares"
+        focusRate={usdtSell}
+      />
+    </section>
+
+    <section class="info-card" aria-labelledby="usdt-trend-heading">
+      <h2 id="usdt-trend-heading" class="section-heading">
+        Evolución USDT Compra y Venta últimos 7 días
+      </h2>
+      <RateHistoryPanel
+        id="usdt-page-history"
+        rates={snapshot.rates}
+        initialCurrencyId={3}
+        defaultDays={7}
+        defaultSources={[3, 4]}
+        initialHistory={history.series}
+        autoInit={true}
+        showFullPageLink={true}
+      />
+    </section>
+
+    <FaqSection faqs={faqs} title="Preguntas frecuentes sobre USDT Binance P2P" />
+
+    <nav aria-label="Páginas relacionadas" class="cross-links">
+      <a href="/dolar-bcv" class="cross-link-btn">Ver Dólar BCV hoy →</a>
+      <a href="/brecha-cambiaria" class="cross-link-btn">Comparar brecha BCV vs USDT →</a>
+      <a href="/tendencias" class="cross-link-btn">Historial completo de 30 días →</a>
+    </nav>
+  </div>
+
+  <RateHistoryDrawer rates={snapshot.rates} initialCurrencyId={3} />
+</BaseLayout>
+
+<style>
+  .subroute-hero {
+    padding-block: 0.75rem 1.75rem;
+  }
+
+  .below-fold-container {
+    max-width: 820px;
+    margin-inline: auto;
+    padding: 0 1rem 3.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .seo-section,
+  .info-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+  }
+
+  .info-card {
+    padding: 1.25rem;
+    border-radius: 14px;
+    border: 1px solid var(--cr-border);
+    background-color: var(--cr-bg-secondary);
+  }
+
+  .section-heading {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--cr-text);
+  }
+
+  .p2p-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .p2p-box {
+    padding: 0.9375rem 1rem;
+    border-radius: 10px;
+    border: 1px solid var(--cr-border);
+    background-color: var(--cr-bg);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .p2p-label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--cr-text-secondary);
+  }
+
+  .p2p-val {
+    font-size: 1.25rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .p2p-val.is-sell {
+    color: var(--cr-danger);
+  }
+
+  .p2p-val.is-buy {
+    color: var(--cr-blue);
+  }
+
+  .p2p-time {
+    font-size: 0.75rem;
+    color: var(--cr-text-secondary);
+  }
+
+  .cross-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .cross-link-btn {
+    padding: 0.5625rem 0.9375rem;
+    border-radius: 10px;
+    border: 1px solid var(--cr-border);
+    background-color: var(--cr-bg-secondary);
+    color: var(--cr-primary);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .cross-link-btn:hover {
+    border-color: var(--cr-primary);
+    background-color: var(--cr-bg-focus);
+  }
+</style>

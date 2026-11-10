@@ -1,0 +1,246 @@
+---
+import BrechaSummary from "@/components/BrechaSummary.astro";
+import CalculatorCard from "@/components/CalculatorCard.astro";
+import EquivalenceTable from "@/components/EquivalenceTable.astro";
+import FaqSection from "@/components/FaqSection.astro";
+import RateHistoryDrawer from "@/components/RateHistoryDrawer.astro";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { formatCurrency } from "@/lib/rates/format";
+import { fetchLatestRatesSnapshot } from "@/lib/rates/supabase";
+import { PUBLIC_ROUTES } from "@/lib/seo/config";
+import { getFaqsForRoute } from "@/lib/seo/faqs";
+import { buildPageMeta } from "@/lib/seo/meta";
+import { buildStructuredData } from "@/lib/seo/schema";
+
+export const prerender = false;
+
+const snapshot = await fetchLatestRatesSnapshot();
+if (!snapshot.ok) {
+  Astro.response.headers.set("Cache-Control", "public, max-age=0, must-revalidate");
+}
+
+const meta = buildPageMeta("home", snapshot.rates);
+const faqs = getFaqsForRoute("home");
+const schemas = buildStructuredData({
+  routeKey: "home",
+  meta,
+  faqs,
+  updatedAtIso: snapshot.updatedAtIso,
+});
+
+const routeLinks = PUBLIC_ROUTES.filter((r) => r.key !== "home" && r.key !== "privacidad");
+---
+
+<BaseLayout meta={meta} schemas={schemas}>
+  <div class="hero-stage">
+    <CalculatorCard
+      rates={snapshot.rates}
+      initialCurrencyId={1}
+      cardTitle="Cambio rápido"
+      asH1={true}
+    />
+  </div>
+
+  <div class="below-fold-container">
+    <section class="seo-section" aria-labelledby="home-rates-heading">
+      <div class="section-intro">
+        <h2 id="home-rates-heading" class="section-heading">
+          Tasas de cambio hoy en Venezuela: Dólar BCV, Euro y USDT Binance
+        </h2>
+        <p class="section-lead">
+          Consulta las referencias actualizadas en horario oficial de Caracas, revisa la brecha cambiaria y explora cada moneda con equivalencias exactas al instante.
+        </p>
+      </div>
+
+      {
+        snapshot.rates.length > 0 && (
+          <ul class="quick-rate-cards">
+            {snapshot.rates.map((r) => {
+              const targetHref =
+                r.currencyId === 1
+                  ? "/dolar-bcv"
+                  : r.currencyId === 2
+                    ? "/euro-bcv"
+                    : "/usdt-binance";
+              return (
+                <li>
+                  <a href={targetHref} class="quick-rate-card">
+                    <span class="quick-rate-name">{r.currencyName}</span>
+                    <strong class="quick-rate-val">
+                      {formatCurrency(r.effectiveRate, "Bs")}
+                    </strong>
+                    <span class="quick-rate-cta">Ver calculadora e historial →</span>
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        )
+      }
+    </section>
+
+    <section class="seo-section" aria-labelledby="home-table-heading">
+      <h2 id="home-table-heading" class="section-heading">
+        Tabla de equivalencias rápidas a Bolívares
+      </h2>
+      <EquivalenceTable
+        id="home-equivalence-caption"
+        caption="Conversión rápida de divisas comunes a Bolívares según la tasa vigente hoy"
+        rates={snapshot.rates}
+      />
+    </section>
+
+    <BrechaSummary rates={snapshot.rates} />
+
+    <FaqSection faqs={faqs} title="Preguntas frecuentes sobre tasas y la calculadora" />
+
+    <nav aria-label="Herramientas relacionadas" class="related-strip">
+      <h2 class="related-title">Explorar herramientas por tasa</h2>
+      <ul class="related-links">
+        {
+          routeLinks.map((route) => (
+            <li>
+              <a href={route.path} class="related-pill">
+                {route.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+  </div>
+
+  <RateHistoryDrawer rates={snapshot.rates} initialCurrencyId={1} />
+</BaseLayout>
+
+<style>
+  .hero-stage {
+    min-height: calc(100dvh - 57px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-block: 1rem 2rem;
+  }
+
+  .below-fold-container {
+    max-width: 820px;
+    margin-inline: auto;
+    padding: 0 1rem 3.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2.25rem;
+  }
+
+  .seo-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .section-intro {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .section-heading {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--cr-text);
+  }
+
+  .section-lead {
+    margin: 0;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--cr-text-secondary);
+  }
+
+  .quick-rate-cards {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .quick-rate-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.9375rem 1rem;
+    border-radius: 12px;
+    border: 1px solid var(--cr-border);
+    background-color: var(--cr-bg-secondary);
+    text-decoration: none;
+    transition: border-color 150ms ease, background-color 150ms ease;
+  }
+
+  .quick-rate-card:hover {
+    border-color: var(--cr-primary);
+    background-color: var(--cr-bg-focus);
+  }
+
+  .quick-rate-name {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--cr-text-secondary);
+  }
+
+  .quick-rate-val {
+    font-size: 1.1875rem;
+    font-weight: 700;
+    color: var(--cr-primary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .quick-rate-cta {
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--cr-text);
+  }
+
+  .related-strip {
+    padding: 1.25rem;
+    border-radius: 14px;
+    border: 1px solid var(--cr-border);
+    background-color: var(--cr-bg-secondary);
+  }
+
+  .related-title {
+    margin: 0 0 0.75rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--cr-text);
+  }
+
+  .related-links {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .related-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.4375rem 0.875rem;
+    border-radius: 999px;
+    border: 1px solid var(--cr-border);
+    background-color: var(--cr-bg);
+    color: var(--cr-text);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .related-pill:hover {
+    border-color: var(--cr-primary);
+    color: var(--cr-primary);
+  }
+</style>
