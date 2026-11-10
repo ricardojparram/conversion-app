@@ -7,6 +7,7 @@ import {
   selectSource,
   getActiveRateValue,
   getActiveRateDate,
+  getActiveCurrencyMeta,
   buildChartSeriesModel,
   getSourceChartColor,
 } from "@/scripts/calculator-state";
@@ -69,7 +70,7 @@ describe("calculator state machine", () => {
     expect(state.foreignCents).toBe(Math.round((1000 / 897.54) * 100));
   });
 
-  it("handles switching sources using only effectiveRate while preserving lastEdited", () => {
+  it("handles switching sources using only effectiveRate while preserving lastEdited and $ metadata for USDT", () => {
     let state = createCalculatorState(sampleRates, 1);
     state = inputDigitsForField(state, "foreign", "1000"); // $10.00
 
@@ -77,11 +78,15 @@ describe("calculator state machine", () => {
     expect(getActiveRateDate(state)).toBe("2026-11-09T00:00:00");
     expect(state.bsCents).toBe(897540);
 
-    // Switch to USDT Venta (1050.60 Bs) -> recalculates bs for $10.00
+    // Switch to USDT Venta (1050.60 Bs) -> recalculates bs for $10.00 and shows "$" / "Dólares"
     state = selectSource(state, 3);
     expect(state.selectedCurrencyId).toBe(3);
     expect(getActiveRateValue(state)).toBe(1050.6);
     expect(state.bsCents).toBe(1050600);
+    expect(getActiveCurrencyMeta(state)).toEqual({
+      suffix: "$",
+      targetLabel: "Dólares",
+    });
   });
 
   it("applies pasted values cleanly and ignores invalid pastes", () => {

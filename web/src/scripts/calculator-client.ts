@@ -25,30 +25,26 @@ function announce(message: string): void {
   }, 20);
 }
 
-async function copyTextToClipboard(text: string): Promise<boolean> {
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-  } catch {
-    // Fallback below
-  }
+type InvokerCommandEvent = Event & {
+  command?: string;
+  source?: Element | null;
+};
 
+function legacyCopy(text: string): boolean {
   try {
-    const textarea = document.createElement("textarea");
-    textarea.value = text;
-    textarea.setAttribute("readonly", "");
-    textarea.style.position = "fixed";
-    textarea.style.opacity = "0";
-    document.body.appendChild(textarea);
-    textarea.select();
-    const legacyCopy = (
-      document as unknown as { execCommand?: (cmd: string) => boolean }
-    ).execCommand;
-    const ok = typeof legacyCopy === "function" ? legacyCopy.call(document, "copy") : false;
-    document.body.removeChild(textarea);
-    return ok;
+    const field = Object.assign(document.createElement("textarea"), { value: text });
+    field.setAttribute("readonly", "");
+    field.style.cssText = "position:fixed;inset-block-start:0;opacity:0";
+    document.body.append(field);
+    field.select();
+    try {
+      const legacyExec = (
+        document as unknown as { execCommand?: (cmd: string) => boolean }
+      ).execCommand;
+      return typeof legacyExec === "function" ? legacyExec.call(document, "copy") : false;
+    } finally {
+      field.remove();
+    }
   } catch {
     return false;
   }
@@ -240,6 +236,103 @@ function setupCalculatorRoot(root: HTMLElement): void {
     }
   };
 
+  const copyTimers = new WeakMap<HTMLButtonElement, number>();
+  let lastCopyAnnouncement = "";
+
+  const reportCopyFeedback = (button: HTMLButtonElement, ok: boolean) => {
+    const tip = button.nextElementSibling as HTMLElement | null;
+    window.clearTimeout(copyTimers.get(button));
+    button.removeAttribute("data-copied");
+    button.removeAttribute("data-failed");
+    button.classList.remove("is-copied");
+
+    let message = ok ? "Copiado" : "No se pudo copiar";
+    if (message === lastCopyAnnouncement) {
+      message += "\u00A0";
+    }
+    lastCopyAnnouncement = message;
+
+    if (tip) tip.textContent = "";
+    void button.offsetWidth;
+    button.setAttribute(ok ? "data-copied" : "data-failed", "");
+    if (ok) {
+      button.classList.add("is-copied");
+    }
+
+    if (tip) {
+      window.requestAnimationFrame(() => {
+        if (button.hasAttribute(ok ? "data-copied" : "data-failed")) {
+          tip.textContent = message;
+        }
+      });
+    }
+
+    const timer = window.setTimeout(() => {
+      button.removeAttribute("data-copied");
+      button.removeAttribute("data-failed");
+      button.classList.remove("is-copied");
+      if (tip) tip.textContent = "";
+    }, 1500);
+    copyTimers.set(button, timer);
+  };
+
+  const performCopy = async (button: HTMLButtonElement, field: "bs" | "foreign") => {
+    const { suffix } = getActiveCurrencyMeta(state);
+    const rawNumber =
+      field === "bs"
+        ? centsToNumber(state.bsCents)
+        : centsToNumber(state.foreignCents);
+    const formatted = formatCurrency(rawNumber, field === "bs" ? "Bs" : suffix);
+
+    let writePromise: Promise<boolean>;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        writePromise = navigator.clipboard.writeText(formatted).then(
+          () => true,
+          () => legacyCopy(formatted),
+        );
+      } else {
+        writePromise = Promise.resolve(legacyCopy(formatted));
+      }
+    } catch {
+      writePromise = Promise.resolve(legacyCopy(formatted));
+    }
+
+    // Immediate optimistic feedback at 0ms while clipboard promise settles
+    reportCopyFeedback(button, true);
+
+    const copied = await writePromise;
+    if (!copied) {
+      reportCopyFeedback(button, false);
+      showToast("error", "No se pudo copiar");
+    }
+  };
+
+  const supportsInvokerCommands =
+    typeof window !== "undefined" && "CommandEvent" in window;
+
+  if (supportsInvokerCommands) {
+    root.addEventListener(
+      "command",
+      (rawEvent) => {
+        const event = rawEvent as InvokerCommandEvent;
+        if (!event.command?.startsWith("--copy")) return;
+        const button =
+          event.source instanceof HTMLButtonElement ? event.source : null;
+        if (!button || !root.contains(button)) return;
+        const field =
+          event.target === bsInput
+            ? "bs"
+            : event.target === foreignInput
+              ? "foreign"
+              : null;
+        if (!field) return;
+        void performCopy(button, field);
+      },
+      true,
+    );
+  }
+
   const attachInputBehavior = (input: HTMLInputElement, field: "bs" | "foreign") => {
     const wrapper = input.closest<HTMLElement>("[data-currency-field]");
     const pasteTooltip = wrapper?.querySelector<HTMLElement>("[data-paste-tooltip]");
@@ -284,6 +377,7 @@ function setupCalculatorRoot(root: HTMLElement): void {
 
     if (wrapper) {
       wrapper.addEventListener("contextmenu", (event) => {
+        if ((event.target as HTMLElement)?.closest("[data-copy-btn]")) return;
         event.preventDefault();
         showPasteTooltip();
       });
@@ -316,23 +410,9 @@ function setupCalculatorRoot(root: HTMLElement): void {
       });
     }
 
-    if (copyBtn) {
-      let copyTimer: number | undefined;
-      copyBtn.addEventListener("click", async () => {
-        const { suffix } = getActiveCurrencyMeta(state);
-        const rawNumber =
-          field === "bs"
-            ? centsToNumber(state.bsCents)
-            : centsToNumber(state.foreignCents);
-        const formatted = formatCurrency(rawNumber, field === "bs" ? "Bs" : suffix);
-        const copied = await copyTextToClipboard(formatted);
-        if (!copied) return;
-        window.clearTimeout(copyTimer);
-        copyBtn.classList.add("is-copied");
-        announce(`Copiado: ${formatted}`);
-        copyTimer = window.setTimeout(() => {
-          copyBtn.classList.remove("is-copied");
-        }, 1500);
+    if (copyBtn && !supportsInvokerCommands) {
+      copyBtn.addEventListener("click", () => {
+        void performCopy(copyBtn, field);
       });
     }
 

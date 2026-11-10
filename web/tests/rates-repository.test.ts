@@ -116,6 +116,49 @@ describe("fetchPaginatedHistory", () => {
     expect(result.map((p) => p.date)).toEqual(["2026-11-08", "2026-11-09"]);
     expect(result[1].rate).toBeCloseTo(1051.0, 4);
   });
+
+  it("handles server max_rows=20 cap for dense intraday series via per-Caracas-day fallback", async () => {
+    const makeDayRows = (day: string, baseRate: number, count: number) =>
+      Array.from({ length: count }, (_, idx) => ({
+        rate: baseRate + idx * 0.01,
+        date: `${day}T${String(Math.floor(idx / 12)).padStart(2, "0")}:${String((idx % 12) * 5).padStart(2, "0")}:00`,
+      }));
+
+    // Simulate a DB where each day has 288 rows (USDT) and PostgREST caps any response to 20 rows
+    const fetcher: HistoryPageFetcher = vi.fn(async ({ startIso, endIso, from, ascending }) => {
+      if (startIso === "2026-11-07T00:00:00" && endIso === "2026-11-09T23:59:59") {
+        // Ascending full-range query hits 20-row cap on day 1
+        return {
+          data: makeDayRows("2026-11-07", 1040 + from * 0.001, 20),
+          error: null,
+        };
+      }
+      // Single-day queries triggered by fallback (ascending: false)
+      const day = startIso.slice(0, 10);
+      const base = day === "2026-11-07" ? 1040 : day === "2026-11-08" ? 1050 : 1060;
+      const rows = makeDayRows(day, base, 20);
+      return {
+        data: ascending === false ? rows.reverse() : rows,
+        error: null,
+      };
+    });
+
+    const result = await fetchPaginatedHistory(
+      fetcher,
+      3,
+      3,
+      new Date("2026-11-09T22:00:00-04:00"),
+    );
+
+    expect(result.map((p) => p.date)).toEqual([
+      "2026-11-07",
+      "2026-11-08",
+      "2026-11-09",
+    ]);
+    expect(result[0].rate).toBeGreaterThan(1040);
+    expect(result[1].rate).toBeGreaterThan(1050);
+    expect(result[2].rate).toBeGreaterThan(1060);
+  });
 });
 
 describe("fetchRatesHistory", () => {

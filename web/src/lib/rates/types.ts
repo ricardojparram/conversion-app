@@ -41,4 +41,6 @@ export interface BrechaResult {
   bcvTotalBs: number;
   usdtTotalBs: number;
   impactBs: number;
+  impactUsdAtUsdt: number;
+  impactUsdAtBcv: number;
 }

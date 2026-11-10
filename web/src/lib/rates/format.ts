@@ -55,8 +55,9 @@ export function getCurrencyDisplaySuffix(
   rate: Pick<ResolvedRate, "code" | "symbol" | "currencyName">,
 ): string {
   const code = rate.code.toUpperCase();
-  if (code === "EUR" || rate.currencyName.toLowerCase().includes("euro")) return "€";
-  if (code === "USDT" || rate.currencyName.toLowerCase().includes("usdt")) return "USDT";
+  if (code === "EUR" || rate.currencyName.toLowerCase().includes("euro")) {
+    return rate.symbol || "€";
+  }
   return rate.symbol || "$";
 }
 
@@ -65,6 +66,5 @@ export function getCurrencyTargetLabel(
 ): string {
   const code = rate.code.toUpperCase();
   if (code === "EUR" || rate.currencyName.toLowerCase().includes("euro")) return "Euros";
-  if (code === "USDT" || rate.currencyName.toLowerCase().includes("usdt")) return "USDT";
   return "Dólares";
 }

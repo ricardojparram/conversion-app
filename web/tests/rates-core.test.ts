@@ -121,11 +121,11 @@ describe("format", () => {
     ).toBe("€");
     expect(
       getCurrencyDisplaySuffix({ code: "USDT", symbol: "$", currencyName: "USDT Venta" }),
-    ).toBe("USDT");
+    ).toBe("$");
 
     expect(getCurrencyTargetLabel({ code: "USD", currencyName: "BCV Dólar" })).toBe("Dólares");
     expect(getCurrencyTargetLabel({ code: "EUR", currencyName: "BCV Euro" })).toBe("Euros");
-    expect(getCurrencyTargetLabel({ code: "USDT", currencyName: "USDT Venta" })).toBe("USDT");
+    expect(getCurrencyTargetLabel({ code: "USDT", currencyName: "USDT Venta" })).toBe("Dólares");
   });
 });
 
@@ -156,12 +156,18 @@ describe("calculator", () => {
 });
 
 describe("brecha", () => {
-  it("calculates difference in Bs, percentage spread, and impact for a reference amount", () => {
-    const result = calculateBrecha(897.54, 1050.6, 100);
-    expect(result.differenceBs).toBeCloseTo(153.06, 2);
-    expect(result.percentage).toBeCloseTo(17.0533, 2);
-    expect(result.bcvTotalBs).toBeCloseTo(89754, 2);
-    expect(result.usdtTotalBs).toBeCloseTo(105060, 2);
-    expect(result.impactBs).toBeCloseTo(15306, 2);
+  it("calculates difference in Bs, percentage spread, and impact in Bs and $ for a reference amount", () => {
+    const result = calculateBrecha(899.27, 1074.76, 100);
+    expect(result.differenceBs).toBeCloseTo(175.49, 2);
+    expect(result.percentage).toBeCloseTo(19.5147, 2);
+    expect(result.bcvTotalBs).toBeCloseTo(89927, 2);
+    expect(result.usdtTotalBs).toBeCloseTo(107476, 2);
+    expect(result.impactBs).toBeCloseTo(17549, 2);
+    expect(result.impactUsdAtUsdt).toBeCloseTo(17549 / 1074.76, 4);
+    expect(result.impactUsdAtBcv).toBeCloseTo(17549 / 899.27, 4);
+
+    const zeroResult = calculateBrecha(0, 0, 100);
+    expect(zeroResult.impactUsdAtUsdt).toBe(0);
+    expect(zeroResult.impactUsdAtBcv).toBe(0);
   });
 });

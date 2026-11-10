@@ -14,6 +14,8 @@ export function calculateBrecha(
   const bcvTotalBs = safeAmount * safeBcv;
   const usdtTotalBs = safeAmount * safeUsdt;
   const impactBs = usdtTotalBs - bcvTotalBs;
+  const impactUsdAtUsdt = safeUsdt > 0 ? impactBs / safeUsdt : 0;
+  const impactUsdAtBcv = safeBcv > 0 ? impactBs / safeBcv : 0;
 
   return {
     bcvRate: safeBcv,
@@ -24,5 +26,7 @@ export function calculateBrecha(
     bcvTotalBs,
     usdtTotalBs,
     impactBs,
+    impactUsdAtUsdt,
+    impactUsdAtBcv,
   };
 }

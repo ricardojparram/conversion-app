@@ -78,7 +78,7 @@ export function buildPageMeta(
         const pct = formatNumber(brecha.percentage);
         const diff = formatNumber(brecha.differenceBs);
         title = `Brecha cambiaria hoy: ${pct}% (BCV vs USDT) | ${SITE_NAME}`;
-        description = `Brecha cambiaria actual entre Dólar BCV (${formatNumber(usdBcv)} Bs) y USDT Binance (${formatNumber(usdtSell)} Bs): ${diff} Bs (${pct}%). Simula el impacto en bolívares.`;
+        description = `Brecha cambiaria actual entre Dólar BCV (${formatNumber(usdBcv)} Bs) y USDT Binance (${formatNumber(usdtSell)} Bs): ${diff} Bs (${pct}%). Simula el impacto en bolívares y dólares.`;
       } else {
         title = `Brecha cambiaria hoy en Venezuela (BCV vs USDT) | ${SITE_NAME}`;
         description = `Compara al instante la diferencia porcentual y en bolívares entre el Dólar oficial del BCV y el USDT en Binance P2P.`;

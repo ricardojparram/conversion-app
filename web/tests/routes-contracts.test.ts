@@ -193,4 +193,28 @@ describe("routes, endpoints, and SEO/MWG structural contracts", () => {
     const dolarAstro = fs.readFileSync(path.join(PAGES_DIR, "dolar-bcv.astro"), "utf-8");
     expect(dolarAstro).not.toContain("directo en la calculadora superior");
   });
+
+  it("places a desktop-only floating theme toggle in Home corner, displays brecha in $, and keeps instant full-height copy button", () => {
+    const homeAstro = fs.readFileSync(path.join(PAGES_DIR, "index.astro"), "utf-8");
+    expect(homeAstro).toContain("floating-theme-toggle");
+    expect(homeAstro).toContain("data-theme-toggle");
+    expect(homeAstro).toContain("@media (min-width: 768px)");
+
+    const brechaSummary = fs.readFileSync(
+      path.join(COMPONENTS_DIR, "BrechaSummary.astro"),
+      "utf-8",
+    );
+    expect(brechaSummary).toContain("data-brecha-impact-usd-usdt");
+    expect(brechaSummary).toContain("data-brecha-impact-usd-bcv");
+    expect(brechaSummary).toContain("impactUsdAtUsdt");
+    expect(brechaSummary).toContain("impactUsdAtBcv");
+
+    const calcAstro = fs.readFileSync(
+      path.join(COMPONENTS_DIR, "CalculatorCard.astro"),
+      "utf-8",
+    );
+    expect(calcAstro).toContain("min-inline-size: 44px");
+    expect(calcAstro).toContain("min-block-size: 44px");
+    expect(calcAstro).toContain("touch-action: manipulation");
+  });
 });

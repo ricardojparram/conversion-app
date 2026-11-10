@@ -117,6 +117,18 @@ const brecha = hasBoth
             <span>Diferencia total en Bolívares:</span>
             <strong data-brecha-impact>{formatCurrency(brecha.impactBs, "Bs")}</strong>
           </div>
+          <div class="impact-row is-diff-usd">
+            <span>Diferencia en $ (a tasa USDT):</span>
+            <strong data-brecha-impact-usd-usdt>
+              {formatCurrency(brecha.impactUsdAtUsdt, "$")}
+            </strong>
+          </div>
+          <div class="impact-row is-diff-usd">
+            <span>Diferencia en $ (a tasa BCV):</span>
+            <strong data-brecha-impact-usd-bcv>
+              {formatCurrency(brecha.impactUsdAtBcv, "$")}
+            </strong>
+          </div>
         </div>
       </div>
     ) : (
@@ -303,9 +315,14 @@ const brecha = hasBoth
     color: var(--cr-text);
   }
 
-  .impact-row.is-diff strong {
+  .impact-row.is-diff strong,
+  .impact-row.is-diff-usd strong {
     color: var(--cr-tint);
     font-weight: 700;
+  }
+
+  .impact-row.is-diff-usd {
+    color: var(--cr-text);
   }
 
   .brecha-empty {
@@ -328,6 +345,8 @@ const brecha = hasBoth
     const bcvTotalEl = root.querySelector<HTMLElement>("[data-brecha-bcv-total]");
     const usdtTotalEl = root.querySelector<HTMLElement>("[data-brecha-usdt-total]");
     const impactEl = root.querySelector<HTMLElement>("[data-brecha-impact]");
+    const impactUsdUsdtEl = root.querySelector<HTMLElement>("[data-brecha-impact-usd-usdt]");
+    const impactUsdBcvEl = root.querySelector<HTMLElement>("[data-brecha-impact-usd-bcv]");
 
     if (!input) return;
 
@@ -343,6 +362,12 @@ const brecha = hasBoth
       if (bcvTotalEl) bcvTotalEl.textContent = formatCurrency(result.bcvTotalBs, "Bs");
       if (usdtTotalEl) usdtTotalEl.textContent = formatCurrency(result.usdtTotalBs, "Bs");
       if (impactEl) impactEl.textContent = formatCurrency(result.impactBs, "Bs");
+      if (impactUsdUsdtEl) {
+        impactUsdUsdtEl.textContent = formatCurrency(result.impactUsdAtUsdt, "$");
+      }
+      if (impactUsdBcvEl) {
+        impactUsdBcvEl.textContent = formatCurrency(result.impactUsdAtBcv, "$");
+      }
     });
   });
 </script>

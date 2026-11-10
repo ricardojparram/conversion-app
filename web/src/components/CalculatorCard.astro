@@ -93,15 +93,20 @@ const updatedLabel = activeRate
               aria-valuetext={`${bsFormatted} Bolívares`}
               class="hidden-currency-input"
             />
-            <button
-              type="button"
-              class="copy-btn"
-              data-copy-btn
-              aria-label="Copiar monto en Bolívares"
-              title="Copiar Bolívares"
-            >
-              <Copy size={20} />
-            </button>
+            <span class="copy-wrap">
+              <button
+                type="button"
+                class="copy-btn"
+                data-copy-btn
+                command="--copy"
+                commandfor="calc-bs-input"
+                aria-label="Copiar monto en Bolívares"
+                title="Copiar Bolívares"
+              >
+                <Copy size={20} />
+              </button>
+              <span class="copy-status-tip" role="status" data-copy-status></span>
+            </span>
           </div>
 
           <div class="paste-tooltip" data-paste-tooltip hidden>
@@ -141,15 +146,20 @@ const updatedLabel = activeRate
               aria-valuetext={`${foreignFormatted} ${targetLabel}`}
               class="hidden-currency-input"
             />
-            <button
-              type="button"
-              class="copy-btn"
-              data-copy-btn
-              aria-label="Copiar monto en divisa"
-              title="Copiar divisa"
-            >
-              <Copy size={20} />
-            </button>
+            <span class="copy-wrap">
+              <button
+                type="button"
+                class="copy-btn"
+                data-copy-btn
+                command="--copy"
+                commandfor="calc-foreign-input"
+                aria-label="Copiar monto en divisa"
+                title="Copiar divisa"
+              >
+                <Copy size={20} />
+              </button>
+              <span class="copy-status-tip" role="status" data-copy-status></span>
+            </span>
           </div>
 
           <div class="paste-tooltip" data-paste-tooltip hidden>
@@ -380,7 +390,7 @@ const updatedLabel = activeRate
     display: flex;
     align-items: center;
     padding-left: 14px;
-    padding-right: 44px;
+    padding-right: 50px;
     gap: 8px;
     transition: background-color 140ms ease, border-color 140ms ease;
   }
@@ -429,23 +439,34 @@ const updatedLabel = activeRate
     z-index: 1;
   }
 
-  .copy-btn {
+  .copy-wrap {
     position: absolute;
-    right: 2px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 38px;
-    height: 38px;
+    inset-block: 0;
+    inset-inline-end: 0;
+    width: 48px;
     z-index: 2;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+  }
+
+  .copy-btn {
+    width: 100%;
+    height: 100%;
+    min-inline-size: 44px;
+    min-block-size: 44px;
+    padding: 0;
     border: 0;
-    border-radius: 8px;
+    border-radius: 0 9px 9px 0;
     background: transparent;
     color: var(--cr-text-secondary);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: color 150ms ease, background-color 150ms ease;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 100ms ease;
   }
 
   .copy-btn:hover {
@@ -455,15 +476,94 @@ const updatedLabel = activeRate
 
   .copy-btn :global(.copy-check-tick) {
     opacity: 0;
-    transition: opacity 120ms ease;
   }
 
+  .copy-btn[data-copied],
   .copy-btn.is-copied {
     color: var(--cr-primary);
   }
 
+  .copy-btn[data-copied] :global(.copy-check-tick),
   .copy-btn.is-copied :global(.copy-check-tick) {
     opacity: 1;
+  }
+
+  .copy-btn[data-failed] {
+    color: var(--cr-danger);
+  }
+
+  .copy-status-tip {
+    position: absolute;
+    inset-block-end: calc(100% + 6px);
+    inset-inline-end: 0;
+    pointer-events: none;
+    opacity: 0;
+    white-space: nowrap;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.25;
+    color: #ffffff;
+    background-color: var(--cr-primary);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+    transition: opacity 120ms ease;
+  }
+
+  .copy-btn[data-copied] + .copy-status-tip {
+    opacity: 1;
+    background-color: var(--cr-primary);
+  }
+
+  .copy-btn[data-failed] + .copy-status-tip {
+    opacity: 1;
+    background-color: var(--cr-danger);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .copy-btn:active {
+      transform: scale(0.94);
+    }
+
+    .copy-btn[data-copied] :global(svg) {
+      animation: cr-copy-pop 160ms ease-out;
+    }
+
+    .copy-btn[data-copied] + .copy-status-tip,
+    .copy-btn[data-failed] + .copy-status-tip {
+      animation: cr-tip-pop 140ms ease-out;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .copy-btn,
+    .copy-status-tip {
+      transition: opacity 120ms ease;
+      animation: none !important;
+    }
+  }
+
+  @keyframes cr-copy-pop {
+    0% {
+      transform: scale(0.9);
+    }
+    60% {
+      transform: scale(1.08);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  @keyframes cr-tip-pop {
+    from {
+      opacity: 0;
+      transform: translateY(3px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   .paste-tooltip[hidden] {
@@ -472,7 +572,7 @@ const updatedLabel = activeRate
 
   .paste-tooltip {
     position: absolute;
-    right: 40px;
+    right: 50px;
     top: -36px;
     z-index: 30;
     background-color: var(--cr-bg-secondary);
