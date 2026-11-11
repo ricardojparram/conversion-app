@@ -217,4 +217,51 @@ describe("routes, endpoints, and SEO/MWG structural contracts", () => {
     expect(calcAstro).toContain("min-block-size: 44px");
     expect(calcAstro).toContain("touch-action: manipulation");
   });
+
+  it("keeps outer table containers non-circular, preserves SVG chart strokes/dots, and avoids 768px navbar cramping", () => {
+    const eqTable = fs.readFileSync(
+      path.join(COMPONENTS_DIR, "EquivalenceTable.astro"),
+      "utf-8",
+    );
+    expect(eqTable).toMatch(/\.eq-section\s*\{[^}]*container-type:\s*inline-size/);
+    expect(eqTable).not.toMatch(/\.table-wrapper\s*\{[^}]*container-type:/);
+    expect(eqTable).toMatch(/@container\s*\(width\s*<\s*520px\)[\s\S]*caption[\s\S]*display:\s*block/);
+    expect(eqTable).toMatch(/tbody th\s*\{[^}]*position:\s*static/);
+
+    const tendenciasAstro = fs.readFileSync(
+      path.join(PAGES_DIR, "tendencias.astro"),
+      "utf-8",
+    );
+    expect(tendenciasAstro).toContain('class="table-container"');
+    expect(tendenciasAstro).toMatch(/\.table-container\s*\{[^}]*container-type:\s*inline-size/);
+    expect(tendenciasAstro).toMatch(/@container\s*\(width\s*<\s*560px\)[\s\S]*caption/);
+
+    const historyPanel = fs.readFileSync(
+      path.join(COMPONENTS_DIR, "RateHistoryPanel.astro"),
+      "utf-8",
+    );
+    const historyClient = fs.readFileSync(
+      path.join(SRC_DIR, "scripts", "history-client.ts"),
+      "utf-8",
+    );
+    expect(historyPanel).toContain('vector-effect="non-scaling-stroke"');
+    expect(historyPanel).toContain("data-chart-dots");
+    expect(historyPanel).not.toContain("<circle");
+    expect(historyClient).toContain('vector-effect="non-scaling-stroke"');
+    expect(historyClient).toContain("chart-dot-marker");
+    expect(historyClient).not.toContain("<circle");
+
+    const navbarAstro = fs.readFileSync(
+      path.join(COMPONENTS_DIR, "Navbar.astro"),
+      "utf-8",
+    );
+    expect(navbarAstro).toContain("@media (min-width: 54rem)");
+    expect(navbarAstro).toContain("min-block-size: 44px");
+
+    const globalCss = fs.readFileSync(
+      path.join(SRC_DIR, "styles", "global.css"),
+      "utf-8",
+    );
+    expect(globalCss).toContain("overflow-wrap: anywhere");
+  });
 });

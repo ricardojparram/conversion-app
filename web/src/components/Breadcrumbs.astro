@@ -42,7 +42,7 @@ const { items } = Astro.props;
   .breadcrumbs-nav {
     max-width: 820px;
     margin: 0.75rem auto 0;
-    padding-inline: 1rem;
+    padding-inline: clamp(0.75rem, 3.5vw, 1rem);
   }
 
   .breadcrumbs-list {
@@ -64,8 +64,17 @@ const { items } = Astro.props;
   }
 
   .breadcrumb-link {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 32px;
     color: var(--cr-text-secondary);
     text-decoration: none;
+  }
+
+  @media (pointer: coarse) {
+    .breadcrumb-link {
+      min-block-size: 40px;
+    }
   }
 
   .breadcrumb-link:hover {

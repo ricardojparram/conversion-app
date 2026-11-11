@@ -83,7 +83,7 @@ const { rates, initialCurrencyId = 1 } = Astro.props;
   }
 
   .dialog-header {
-    padding: 0.875rem 1.5rem 0.5rem;
+    padding: 0.875rem clamp(1rem, 4vw, 1.5rem) 0.5rem;
     width: 100%;
     touch-action: pan-x;
     cursor: grab;
@@ -106,6 +106,7 @@ const { rates, initialCurrencyId = 1 } = Astro.props;
 
   .dialog-title {
     margin: 0.25rem 0 0;
+    padding-inline: 2.5rem;
     font-size: 1.125rem;
     font-weight: 600;
     text-align: center;
@@ -129,6 +130,12 @@ const { rates, initialCurrencyId = 1 } = Astro.props;
     cursor: pointer;
   }
 
+  .close-btn::after {
+    content: "";
+    position: absolute;
+    inset: -8px;
+  }
+
   .close-btn:hover {
     background-color: var(--cr-border-focus);
     color: var(--cr-text);
@@ -136,8 +143,8 @@ const { rates, initialCurrencyId = 1 } = Astro.props;
 
   @media (pointer: coarse) {
     .close-btn {
-      min-width: 36px;
-      min-height: 36px;
+      width: 36px;
+      height: 36px;
     }
   }
 
@@ -145,7 +152,7 @@ const { rates, initialCurrencyId = 1 } = Astro.props;
     flex: 1;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding: 0.625rem 1.5rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
+    padding: 0.625rem clamp(1rem, 4vw, 1.5rem) calc(1.5rem + env(safe-area-inset-bottom, 0px));
   }
 
   @media (min-width: 768px) {
@@ -155,7 +162,7 @@ const { rates, initialCurrencyId = 1 } = Astro.props;
     }
 
     .dialog-sheet {
-      width: 440px;
+      width: min(480px, calc(100dvw - 2rem));
       min-height: auto;
       max-height: 85dvh;
       border-radius: 16px;
@@ -181,11 +188,12 @@ const { rates, initialCurrencyId = 1 } = Astro.props;
 
     .dialog-title {
       margin: 0;
+      padding-inline: 0;
       text-align: left;
     }
 
     .close-btn {
-      position: static;
+      position: relative;
       transform: none;
     }
 

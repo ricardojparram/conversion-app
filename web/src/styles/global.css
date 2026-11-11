@@ -95,6 +95,7 @@ body {
   flex-direction: column;
   background-color: var(--cr-bg);
   color: var(--cr-text);
+  overflow-wrap: anywhere;
 }
 
 /* Theme toggle icon visibility follows <meta name="color-scheme"> + OS scheme in pure CSS */

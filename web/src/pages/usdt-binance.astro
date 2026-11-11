@@ -138,7 +138,7 @@ const usdtBuy = snapshot.rates.find((r) => r.currencyId === 4) ?? null;
   .below-fold-container {
     max-width: 820px;
     margin-inline: auto;
-    padding: 0 1rem 3.5rem;
+    padding: 0 clamp(0.75rem, 3.5vw, 1rem) 3.5rem;
     display: flex;
     flex-direction: column;
     gap: 2rem;
@@ -152,7 +152,7 @@ const usdtBuy = snapshot.rates.find((r) => r.currencyId === 4) ?? null;
   }
 
   .info-card {
-    padding: 1.25rem;
+    padding: clamp(0.875rem, 3.5vw, 1.25rem);
     border-radius: 14px;
     border: 1px solid var(--cr-border);
     background-color: var(--cr-bg-secondary);
@@ -160,25 +160,27 @@ const usdtBuy = snapshot.rates.find((r) => r.currencyId === 4) ?? null;
 
   .section-heading {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: clamp(1.125rem, 3vw, 1.25rem);
     font-weight: 700;
     color: var(--cr-text);
+    text-wrap: balance;
   }
 
   .p2p-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
     gap: 0.75rem;
   }
 
   .p2p-box {
-    padding: 0.9375rem 1rem;
+    padding: clamp(0.75rem, 3vw, 0.9375rem) clamp(0.75rem, 3vw, 1rem);
     border-radius: 10px;
     border: 1px solid var(--cr-border);
     background-color: var(--cr-bg);
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+    min-inline-size: 0;
   }
 
   .p2p-label {
@@ -207,13 +209,17 @@ const usdtBuy = snapshot.rates.find((r) => r.currencyId === 4) ?? null;
   }
 
   .cross-links {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr));
+    gap: 0.625rem;
   }
 
   .cross-link-btn {
-    padding: 0.5625rem 0.9375rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    min-block-size: 44px;
+    padding: 0.625rem 0.9375rem;
     border-radius: 10px;
     border: 1px solid var(--cr-border);
     background-color: var(--cr-bg-secondary);

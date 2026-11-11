@@ -83,6 +83,7 @@ export function initHistoryPanel(panel: HTMLElement): HistoryController {
   const maxValEl = panel.querySelector<HTMLElement>("[data-metric-max]");
   const changeValEl = panel.querySelector<HTMLElement>("[data-metric-change]");
   const svgEl = panel.querySelector<SVGSVGElement>("[data-chart-svg]");
+  const dotsEl = panel.querySelector<HTMLElement>("[data-chart-dots]");
   const multiListEl = panel.querySelector<HTMLElement>("[data-multi-summary]");
   const detailToggleWrap = panel.querySelector<HTMLElement>("[data-detail-wrap]");
   const detailToggleBtn = panel.querySelector<HTMLButtonElement>("[data-detail-toggle]");
@@ -155,7 +156,10 @@ export function initHistoryPanel(panel: HTMLElement): HistoryController {
     if (emptyEl) emptyEl.hidden = isLoading || model.series.length > 0;
     if (contentEl) contentEl.hidden = model.series.length === 0;
 
-    if (model.series.length === 0) return;
+    if (model.series.length === 0) {
+      if (dotsEl) dotsEl.innerHTML = "";
+      return;
+    }
 
     if (singleMetricsEl) singleMetricsEl.hidden = !isSingleMode || !singleSeries;
     if (isSingleMode && singleSeries) {
@@ -188,20 +192,22 @@ export function initHistoryPanel(panel: HTMLElement): HistoryController {
       const strokes = model.series
         .map((s) =>
           s.linePath
-            ? `<path d="${s.linePath}" fill="none" stroke="${s.color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />`
+            ? `<path d="${s.linePath}" fill="none" stroke="${s.color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />`
             : "",
         )
         .join("");
 
-      const dots = model.series
+      svgEl.innerHTML = `<title>Tendencia de tasa últimos ${days} días</title><defs>${defs}</defs>${fills}${strokes}`;
+    }
+
+    if (dotsEl) {
+      dotsEl.innerHTML = model.series
         .map((s) =>
           s.lastPoint
-            ? `<circle cx="${s.lastPoint.x.toFixed(1)}" cy="${s.lastPoint.y.toFixed(1)}" r="8" fill="${s.color}" opacity="0.15"/><circle cx="${s.lastPoint.x.toFixed(1)}" cy="${s.lastPoint.y.toFixed(1)}" r="4" fill="${s.color}"/>`
+            ? `<span class="chart-dot-marker" style="--dot-x: ${((s.lastPoint.x / 300) * 100).toFixed(2)}%; --dot-y: ${((s.lastPoint.y / 150) * 100).toFixed(2)}%; --dot-color: ${s.color};"></span>`
             : "",
         )
         .join("");
-
-      svgEl.innerHTML = `<title>Tendencia de tasa últimos ${days} días</title><defs>${defs}</defs>${fills}${strokes}${dots}`;
     }
 
     if (multiListEl) {
@@ -211,7 +217,7 @@ export function initHistoryPanel(panel: HTMLElement): HistoryController {
           .map((s) => {
             const arrow = s.isPositive ? "▲" : "▼";
             const trendCol = s.isPositive ? "#16a249" : "#ea4335";
-            return `<div class="compare-row"><div><div class="compare-name"><span class="compare-dot" style="background:${s.color}"></span><span>${s.shortName}</span></div><div class="compare-range">Mín: ${formatCurrency(s.minRate, "Bs")} • Máx: ${formatCurrency(s.maxRate, "Bs")}</div></div><div class="compare-values"><span class="compare-latest">${formatCurrency(s.latestRate, "Bs")}</span><span class="compare-pct" style="color:${trendCol}">${arrow} ${s.changePercent.toFixed(2)}%</span></div></div>`;
+            return `<div class="compare-row"><div class="compare-info"><div class="compare-name"><span class="compare-dot" style="background:${s.color}"></span><span>${s.shortName}</span></div><div class="compare-range">Mín: ${formatCurrency(s.minRate, "Bs")} • Máx: ${formatCurrency(s.maxRate, "Bs")}</div></div><div class="compare-values"><span class="compare-latest">${formatCurrency(s.latestRate, "Bs")}</span><span class="compare-pct" style="color:${trendCol}">${arrow} ${s.changePercent.toFixed(2)}%</span></div></div>`;
           })
           .join("");
       }

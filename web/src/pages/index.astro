@@ -83,7 +83,7 @@ const routeLinks = PUBLIC_ROUTES.filter((r) => r.key !== "home" && r.key !== "pr
   </div>
 
   <div class="below-fold-container">
-    <section class="seo-section" aria-labelledby="home-rates-heading">
+    <section class="seo-section quick-rates-section" aria-labelledby="home-rates-heading">
       <div class="section-intro">
         <h2 id="home-rates-heading" class="section-heading">
           Tasas de cambio hoy en Venezuela: Dólar BCV, Euro y USDT Binance
@@ -159,7 +159,7 @@ const routeLinks = PUBLIC_ROUTES.filter((r) => r.key !== "home" && r.key !== "pr
     position: relative;
     min-height: 100dvh;
     display: flex;
-    align-items: center;
+    align-items: safe center;
     justify-content: center;
     padding-block: 1rem 2rem;
   }
@@ -204,7 +204,7 @@ const routeLinks = PUBLIC_ROUTES.filter((r) => r.key !== "home" && r.key !== "pr
   .below-fold-container {
     max-width: 820px;
     margin-inline: auto;
-    padding: 0 1rem 3.5rem;
+    padding: 0 clamp(0.75rem, 3.5vw, 1rem) 3.5rem;
     display: flex;
     flex-direction: column;
     gap: 2.25rem;
@@ -216,6 +216,10 @@ const routeLinks = PUBLIC_ROUTES.filter((r) => r.key !== "home" && r.key !== "pr
     gap: 1rem;
   }
 
+  .quick-rates-section {
+    container-type: inline-size;
+  }
+
   .section-intro {
     display: flex;
     flex-direction: column;
@@ -224,7 +228,7 @@ const routeLinks = PUBLIC_ROUTES.filter((r) => r.key !== "home" && r.key !== "pr
 
   .section-heading {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: clamp(1.125rem, 3vw, 1.25rem);
     font-weight: 700;
     color: var(--cr-text);
     text-wrap: balance;
@@ -243,15 +247,29 @@ const routeLinks = PUBLIC_ROUTES.filter((r) => r.key !== "home" && r.key !== "pr
     margin: 0;
     padding: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
-    gap: 0.75rem;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.625rem;
+  }
+
+  @container (width >= 340px) {
+    .quick-rate-cards {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+  }
+
+  @container (width >= 680px) {
+    .quick-rate-cards {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
   }
 
   .quick-rate-card {
+    height: 100%;
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
-    padding: 0.9375rem 1rem;
+    padding: clamp(0.75rem, 2.5vw, 0.9375rem) clamp(0.8125rem, 2.5vw, 1rem);
     border-radius: 12px;
     border: 1px solid var(--cr-border);
     background-color: var(--cr-bg-secondary);
@@ -271,21 +289,22 @@ const routeLinks = PUBLIC_ROUTES.filter((r) => r.key !== "home" && r.key !== "pr
   }
 
   .quick-rate-val {
-    font-size: 1.1875rem;
+    font-size: clamp(1.0625rem, 3.2vw, 1.1875rem);
     font-weight: 700;
     color: var(--cr-primary);
     font-variant-numeric: tabular-nums;
   }
 
   .quick-rate-cta {
-    margin-top: 0.25rem;
+    margin-top: auto;
+    padding-top: 0.25rem;
     font-size: 0.75rem;
     font-weight: 600;
     color: var(--cr-text);
   }
 
   .related-strip {
-    padding: 1.25rem;
+    padding: clamp(0.875rem, 3.5vw, 1.25rem);
     border-radius: 14px;
     border: 1px solid var(--cr-border);
     background-color: var(--cr-bg-secondary);
@@ -296,6 +315,7 @@ const routeLinks = PUBLIC_ROUTES.filter((r) => r.key !== "home" && r.key !== "pr
     font-size: 1rem;
     font-weight: 700;
     color: var(--cr-text);
+    text-wrap: balance;
   }
 
   .related-links {
@@ -304,13 +324,15 @@ const routeLinks = PUBLIC_ROUTES.filter((r) => r.key !== "home" && r.key !== "pr
     padding: 0;
     display: flex;
     flex-wrap: wrap;
+    flex-wrap: balance;
     gap: 0.5rem;
   }
 
   .related-pill {
     display: inline-flex;
     align-items: center;
-    padding: 0.4375rem 0.875rem;
+    min-block-size: 40px;
+    padding: 0.4375rem 0.9375rem;
     border-radius: 999px;
     border: 1px solid var(--cr-border);
     background-color: var(--cr-bg);
@@ -318,6 +340,12 @@ const routeLinks = PUBLIC_ROUTES.filter((r) => r.key !== "home" && r.key !== "pr
     font-size: 0.8125rem;
     font-weight: 600;
     text-decoration: none;
+  }
+
+  @media (pointer: coarse) {
+    .related-pill {
+      min-block-size: 44px;
+    }
   }
 
   .related-pill:hover {

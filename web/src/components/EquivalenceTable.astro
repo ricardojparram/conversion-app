@@ -133,13 +133,13 @@ const hasRows = isSingleMode
 <style>
   .eq-section {
     width: 100%;
+    container-type: inline-size;
   }
 
   .table-wrapper {
     overflow: auto;
     max-inline-size: 100%;
     max-block-size: min(520px, 75vh);
-    container-type: inline-size;
     border: 1px solid var(--cr-border);
     border-radius: 12px;
     background-color: var(--cr-bg-secondary);
@@ -166,7 +166,7 @@ const hasRows = isSingleMode
   thead {
     position: sticky;
     inset-block-start: 0;
-    z-index: 1;
+    z-index: 2;
     background-color: var(--cr-bg-focus);
   }
 
@@ -184,9 +184,15 @@ const hasRows = isSingleMode
     color: var(--cr-text-secondary);
   }
 
+  thead th:not(:first-child),
+  tbody td {
+    text-align: right;
+  }
+
   tbody th {
     position: sticky;
     inset-inline-start: 0;
+    z-index: 1;
     background-color: var(--cr-bg-secondary);
     font-weight: 600;
     color: var(--cr-primary);
@@ -215,12 +221,14 @@ const hasRows = isSingleMode
   @container (width < 520px) {
     .table-wrapper {
       border: 0;
+      border-radius: 0;
       background: transparent;
       max-block-size: none;
       overflow: visible;
     }
 
     table,
+    caption,
     thead,
     tbody,
     tr,
@@ -229,17 +237,29 @@ const hasRows = isSingleMode
       display: block;
     }
 
+    table,
+    caption,
+    tbody,
+    tr,
+    tbody th {
+      inline-size: 100%;
+    }
+
     .table-caption {
       border: 0;
       padding: 0 0 0.75rem;
       background: transparent;
+      font-size: 0.9rem;
+      line-height: 1.45;
+      color: var(--cr-text-secondary);
+      text-wrap: pretty;
     }
 
     thead {
       display: none;
     }
 
-    tr {
+    tbody tr {
       margin-block-end: 0.75rem;
       border: 1px solid var(--cr-border);
       border-radius: 10px;
@@ -247,38 +267,48 @@ const hasRows = isSingleMode
       background-color: var(--cr-bg-secondary);
     }
 
+    tbody tr:last-child {
+      margin-block-end: 0;
+    }
+
     tbody th {
-      position: sticky;
-      inset-block-start: 0;
-      z-index: 2;
+      position: static;
+      inset-inline-start: auto;
+      inset-block-start: auto;
+      padding: 0.625rem 0.875rem;
       background-color: var(--cr-bg-focus);
       border-bottom: 1px solid var(--cr-border);
     }
 
-    td {
+    tbody td {
       display: flex;
+      flex-wrap: wrap;
       justify-content: space-between;
-      align-items: center;
-      gap: 0.75rem;
-      white-space: normal;
+      align-items: baseline;
+      gap: 0.25rem 0.75rem;
+      padding: 0.5625rem 0.875rem;
+      text-align: right;
+      white-space: nowrap;
       border-bottom: 1px solid var(--cr-border);
     }
 
-    td::before {
+    tbody td::before {
       color: var(--cr-text-secondary);
       font-size: 0.8125rem;
       font-weight: 600;
+      text-align: left;
+      white-space: normal;
     }
 
-    td:nth-child(2)::before {
+    tbody td:nth-child(2)::before {
       content: var(--col-2) ": ";
     }
 
-    td:nth-child(3)::before {
+    tbody td:nth-child(3)::before {
       content: var(--col-3) ": ";
     }
 
-    td:nth-child(4)::before {
+    tbody td:nth-child(4)::before {
       content: var(--col-4) ": ";
     }
 
