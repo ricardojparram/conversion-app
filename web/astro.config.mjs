@@ -65,6 +65,9 @@ export default defineConfig({
     },
   }),
   vite: {
+    // Pin Vite/Rolldown to web/tsconfig.json so monorepo SSR builds on Vercel
+    // never walk up into the root Expo tsconfig.json (which extends expo/tsconfig.base).
+    tsconfig: path.join(webDir, "tsconfig.json"),
     plugins: [tailwindcss()],
     optimizeDeps: {
       exclude: ["@resvg/resvg-wasm"],

@@ -494,5 +494,8 @@ describe("routes, endpoints, and SEO/MWG structural contracts", () => {
     const privacidadAstro = fs.readFileSync(path.join(PAGES_DIR, "privacidad.astro"), "utf-8");
     expect(privacidadAstro).not.toContain("mailto:");
     expect(privacidadAstro).not.toContain("info@cambiorapido.app");
+
+    const astroConfig = fs.readFileSync(path.join(WEB_ROOT, "astro.config.mjs"), "utf-8");
+    expect(astroConfig).toContain('tsconfig: path.join(webDir, "tsconfig.json")');
   });
 });
