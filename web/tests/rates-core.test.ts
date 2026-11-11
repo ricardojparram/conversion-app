@@ -4,6 +4,11 @@ import {
   getCaracasDayStartMs,
   formatCaracasTimestamp,
   formatSimpleCaracasDate,
+  hasExplicitCaracasTime,
+  shouldIncludeTimeForRate,
+  toCaracasIsoString,
+  formatNaturalCaracasDateTime,
+  formatNaturalFutureCaracasDate,
 } from "@/lib/rates/caracas-date";
 import { resolveEffectiveRate } from "@/lib/rates/bcv-validity";
 import {
@@ -47,6 +52,102 @@ describe("caracas-date", () => {
 
     expect(getCaracasDayStartMs(caracasNight)).toBe(oldValidity);
     expect(oldValidity).toBeLessThan(nextValidity);
+  });
+
+  it("distinguishes date-only BCV fecha valor from intraday Binance timestamps", () => {
+    expect(hasExplicitCaracasTime("2026-11-11")).toBe(false);
+    expect(hasExplicitCaracasTime("2026-11-11T00:00:00")).toBe(false);
+    expect(hasExplicitCaracasTime("2026-11-11T04:00:00Z")).toBe(false);
+    expect(hasExplicitCaracasTime("2026-11-11T00:00:01")).toBe(true);
+    expect(hasExplicitCaracasTime("2026-11-11T10:30:00")).toBe(true);
+
+    expect(
+      shouldIncludeTimeForRate({
+        source: "BCV",
+        effectiveDate: "2026-11-11T00:00:00",
+      }),
+    ).toBe(false);
+    expect(
+      shouldIncludeTimeForRate({
+        source: "Binance",
+        effectiveDate: "2026-11-11T14:25:00",
+      }),
+    ).toBe(true);
+    expect(
+      shouldIncludeTimeForRate({
+        source: "Binance",
+        effectiveDate: "2026-11-11",
+      }),
+    ).toBe(false);
+
+    expect(toCaracasIsoString("2026-11-11T00:00:00", false)).toBe("2026-11-11");
+    expect(toCaracasIsoString("2026-11-11T10:30:00", true)).toBe(
+      "2026-11-11T14:30:00.000Z",
+    );
+  });
+
+  it("formats intraday timestamps naturally in Spanish across minutes, hours, today, yesterday, week, and older dates", () => {
+    const now = "2026-11-11T15:30:00"; // Miércoles 11/11 3:30 p.m. Caracas
+
+    expect(formatNaturalCaracasDateTime("2026-11-11T15:29:15", now)).toBe("ahora mismo");
+    expect(formatNaturalCaracasDateTime("2026-11-11T15:30:40", now)).toBe("ahora mismo");
+    expect(formatNaturalCaracasDateTime("2026-11-11T15:25:00", now)).toBe("hace 5 min");
+    expect(formatNaturalCaracasDateTime("2026-11-11T14:30:00", now)).toBe("hace 1 h");
+    expect(formatNaturalCaracasDateTime("2026-11-11T10:30:00", now)).toBe("hace 5 h");
+
+    // 6+ hours earlier on the same day switches to "Hoy a la/las ..."
+    expect(formatNaturalCaracasDateTime("2026-11-11T08:30:00", now)).toBe(
+      "Hoy a las 8:30 a.m.",
+    );
+    expect(
+      formatNaturalCaracasDateTime("2026-11-11T13:05:00", "2026-11-11T20:00:00"),
+    ).toBe("Hoy a la 1:05 p.m.");
+    expect(
+      formatNaturalCaracasDateTime("2026-11-11T00:05:00", "2026-11-11T08:00:00"),
+    ).toBe("Hoy a las 12:05 a.m.");
+
+    // Cross-midnight within 60 min stays "hace X min"
+    expect(
+      formatNaturalCaracasDateTime("2026-11-10T23:55:00", "2026-11-11T00:05:00"),
+    ).toBe("hace 10 min");
+
+    // Yesterday, 2-6 days ago, and 7+ days ago
+    expect(formatNaturalCaracasDateTime("2026-11-10T22:30:00", now)).toBe(
+      "Ayer a las 10:30 p.m.",
+    );
+    expect(formatNaturalCaracasDateTime("2026-11-10T13:15:00", now)).toBe(
+      "Ayer a la 1:15 p.m.",
+    );
+    expect(formatNaturalCaracasDateTime("2026-11-06T09:15:00", now)).toBe(
+      "Viernes 6/11 a las 9:15 a.m.",
+    );
+    expect(formatNaturalCaracasDateTime("2026-11-02T16:30:00", now)).toBe(
+      "02/11/26 4:30 p.m.",
+    );
+  });
+
+  it("formats BCV date-only values without fake 12:00 a.m. clocks and formats upcoming BCV dates", () => {
+    const now = "2026-11-11T15:30:00";
+
+    expect(
+      formatNaturalCaracasDateTime("2026-11-11T00:00:00", now, { includeTime: false }),
+    ).toBe("Hoy");
+    expect(formatNaturalCaracasDateTime("2026-11-10", now)).toBe("Ayer");
+    expect(formatNaturalCaracasDateTime("2026-11-06T00:00:00", now)).toBe(
+      "Viernes 6/11",
+    );
+    expect(formatNaturalCaracasDateTime("2026-11-02T00:00:00", now)).toBe("02/11/26");
+
+    expect(formatNaturalFutureCaracasDate("2026-11-11T00:00:00", now)).toBe("hoy");
+    expect(formatNaturalFutureCaracasDate("2026-11-12T00:00:00", now)).toBe(
+      "mañana (12/11)",
+    );
+    expect(formatNaturalFutureCaracasDate("2026-11-16T00:00:00", now)).toBe(
+      "el lunes 16/11",
+    );
+    expect(formatNaturalFutureCaracasDate("2026-11-20T00:00:00", now)).toBe(
+      "el 20/11/26",
+    );
   });
 });
 

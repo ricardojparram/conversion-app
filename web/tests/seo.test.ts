@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { PUBLIC_ROUTES, getSiteUrl, buildCanonicalUrl } from "@/lib/seo/config";
+import {
+  PUBLIC_ROUTES,
+  getSiteUrl,
+  buildCanonicalUrl,
+  isIndexableDeployment,
+} from "@/lib/seo/config";
 import { buildPageMeta } from "@/lib/seo/meta";
 import { buildStructuredData } from "@/lib/seo/schema";
 import { getFaqsForRoute } from "@/lib/seo/faqs";
+import { buildOgSvg } from "@/lib/seo/og-image";
 import { buildRobotsTxt, buildSitemapXml } from "@/lib/seo/sitemap";
 import type { ResolvedRate } from "@/lib/rates/types";
 
@@ -62,18 +68,56 @@ describe("seo config & canonical URLs", () => {
       "https://cambiorapido.app/euro-bcv",
     );
   });
+
+  it("blocks indexing on vercel.app / preview deployments unless explicitly enabled", () => {
+    expect(
+      isIndexableDeployment({
+        siteUrl: "https://cambio-rapido-astro-preview.vercel.app",
+      }),
+    ).toBe(false);
+    expect(
+      isIndexableDeployment({
+        siteUrl: "https://cambiorapido.app",
+        vercelEnv: "preview",
+      }),
+    ).toBe(false);
+    expect(
+      isIndexableDeployment({
+        siteUrl: "https://cambiorapido.app",
+        vercelEnv: "production",
+      }),
+    ).toBe(true);
+    expect(
+      isIndexableDeployment({
+        siteUrl: "https://cambiorapido.app",
+        indexableEnv: "true",
+        vercelEnv: "preview",
+      }),
+    ).toBe(true);
+  });
 });
 
 describe("seo metadata", () => {
-  it("builds unique non-empty title and description for every public route", () => {
+  it("builds unique non-empty title, description, and OG URL within SERP length budgets", () => {
+    const highRates: ResolvedRate[] = sampleRates.map((r, i) => ({
+      ...r,
+      effectiveRate: 9876.54 + i * 321.11,
+    }));
     const titles = new Set<string>();
     const descriptions = new Set<string>();
 
     for (const route of PUBLIC_ROUTES) {
-      const meta = buildPageMeta(route.key, sampleRates, "https://cambiorapido.app");
+      const meta = buildPageMeta(route.key, highRates, "https://cambiorapido.app");
       expect(meta.title.trim().length).toBeGreaterThan(15);
+      expect(meta.title.length, `Title too long on ${route.key}`).toBeLessThanOrEqual(60);
       expect(meta.description.trim().length).toBeGreaterThan(40);
+      expect(
+        meta.description.length,
+        `Description too long on ${route.key}`,
+      ).toBeLessThanOrEqual(155);
       expect(meta.canonical).toMatch(/^https:\/\/cambiorapido\.app\//);
+      expect(meta.ogImage).toBe(`https://cambiorapido.app/og/${route.key}.png`);
+      expect(meta.ogImageAlt.trim().length).toBeGreaterThan(10);
       titles.add(meta.title);
       descriptions.add(meta.description);
     }
@@ -91,40 +135,66 @@ describe("seo metadata", () => {
     expect(euroMeta.title).toContain("1.001,19");
     expect(usdtMeta.title).toContain("1.050,60");
   });
+
+  it("marks 404 route as noindex, nofollow with canonical /404", () => {
+    const notFoundMeta = buildPageMeta("not-found", sampleRates, "https://cambiorapido.app");
+    expect(notFoundMeta.robots).toBe("noindex, nofollow");
+    expect(notFoundMeta.canonical).toBe("https://cambiorapido.app/404");
+    expect(notFoundMeta.ogImage).toBe("https://cambiorapido.app/og-image.png");
+  });
 });
 
-describe("JSON-LD schema & FAQs", () => {
-  it("emits WebSite, Organization and WebApplication on home without MobileApplication", () => {
-    const meta = buildPageMeta("home", sampleRates);
+describe("JSON-LD schema, FAQs & dynamic OG SVG", () => {
+  it("emits unified @graph with Organization, WebSite, WebApplication, ExchangeRateSpecification and FAQPage on home", () => {
+    const meta = buildPageMeta("home", sampleRates, "https://cambiorapido.app");
     const faqs = getFaqsForRoute("home");
     const schemas = buildStructuredData({
       routeKey: "home",
+      siteUrl: "https://cambiorapido.app",
       meta,
       faqs,
       updatedAtIso: "2026-11-10T02:15:00.000Z",
+      rates: sampleRates,
     });
 
-    const types = schemas.map((s) => s["@type"]);
-    expect(types).toContain("WebSite");
+    expect(schemas).toHaveLength(1);
+    expect(schemas[0]["@context"]).toBe("https://schema.org");
+    const graph = schemas[0]["@graph"] as Array<Record<string, unknown>>;
+    expect(Array.isArray(graph)).toBe(true);
+
+    const types = graph.map((s) => s["@type"]);
     expect(types).toContain("Organization");
+    expect(types).toContain("WebSite");
     expect(types).toContain("WebApplication");
+    expect(types).toContain("WebPage");
+    expect(types).toContain("ImageObject");
     expect(types).toContain("FAQPage");
+    expect(types).toContain("ExchangeRateSpecification");
     expect(types).not.toContain("MobileApplication");
+
+    const rateSpecs = graph.filter((s) => s["@type"] === "ExchangeRateSpecification");
+    expect(rateSpecs.length).toBeGreaterThanOrEqual(3);
+
+    const org = graph.find((s) => s["@type"] === "Organization") as Record<string, unknown>;
+    expect(org.contactPoint).toBeUndefined();
   });
 
   it("emits BreadcrumbList on subpages with absolute canonical item URLs", () => {
-    const meta = buildPageMeta("dolar-bcv", sampleRates);
+    const meta = buildPageMeta("dolar-bcv", sampleRates, "https://cambiorapido.app");
     const schemas = buildStructuredData({
       routeKey: "dolar-bcv",
+      siteUrl: "https://cambiorapido.app",
       meta,
       breadcrumbs: [
         { name: "Inicio", path: "/" },
         { name: "Dólar BCV hoy", path: "/dolar-bcv" },
       ],
       faqs: getFaqsForRoute("dolar-bcv"),
+      rates: sampleRates,
     });
 
-    const breadcrumb = schemas.find((s) => s["@type"] === "BreadcrumbList") as {
+    const graph = schemas[0]["@graph"] as Array<Record<string, unknown>>;
+    const breadcrumb = graph.find((s) => s["@type"] === "BreadcrumbList") as {
       itemListElement: { position: number; name: string; item: string }[];
     };
     expect(breadcrumb).toBeDefined();
@@ -133,14 +203,66 @@ describe("JSON-LD schema & FAQs", () => {
       "https://cambiorapido.app/dolar-bcv",
     );
   });
+
+  it("emits Dataset schema on tendencias with temporalCoverage and DataDownload", () => {
+    const meta = buildPageMeta("tendencias", sampleRates, "https://cambiorapido.app");
+    const schemas = buildStructuredData({
+      routeKey: "tendencias",
+      siteUrl: "https://cambiorapido.app",
+      meta,
+      faqs: getFaqsForRoute("tendencias"),
+      updatedAtIso: "2026-11-10T02:15:00.000Z",
+      rates: sampleRates,
+      historyDateRange: { start: "2026-10-12", end: "2026-11-10" },
+    });
+
+    const graph = schemas[0]["@graph"] as Array<Record<string, unknown>>;
+    const dataset = graph.find((s) => s["@type"] === "Dataset") as
+      | Record<string, unknown>
+      | undefined;
+    expect(dataset).toBeDefined();
+    expect(dataset?.temporalCoverage).toBe("2026-10-12/2026-11-10");
+    expect(
+      (dataset?.distribution as Record<string, unknown> | undefined)?.contentUrl,
+    ).toBe("https://cambiorapido.app/api/history.json?days=30&currencyIds=1,2,3,4");
+  });
+
+  it("renders dynamic SVG templates containing live Venezuelan FX rates", () => {
+    const homeSvg = buildOgSvg("home", sampleRates, "https://cambiorapido.app");
+    expect(homeSvg).toContain("897,54 Bs");
+    expect(homeSvg).toContain("1.001,19 Bs");
+    expect(homeSvg).toContain("1.050,60 Bs");
+    expect(homeSvg).toContain("cambiorapido.app");
+
+    const brechaSvg = buildOgSvg("brecha-cambiaria", sampleRates, "https://cambiorapido.app");
+    expect(brechaSvg).toContain("+17,05%");
+
+    const previewSvg = buildOgSvg(
+      "dolar-bcv",
+      sampleRates,
+      "https://cambio-rapido-astro-preview.vercel.app",
+    );
+    const pillMatch = previewSvg.match(/transform="translate\((\d+), 48\)"\s*>\s*<rect width="(\d+)"/);
+    expect(pillMatch).not.toBeNull();
+    const pillRight = Number(pillMatch![1]) + Number(pillMatch![2]);
+    expect(pillRight).toBe(1136);
+  });
 });
 
 describe("robots.txt & sitemap.xml", () => {
-  it("allows crawling public pages, disallows /api/, and links sitemap", () => {
-    const robots = buildRobotsTxt("https://cambiorapido.app");
+  it("allows crawling public pages, disallows /api/, and links sitemap when indexable", () => {
+    const robots = buildRobotsTxt("https://cambiorapido.app", true);
     expect(robots).toContain("Allow: /");
     expect(robots).toContain("Disallow: /api/");
     expect(robots).toContain("Sitemap: https://cambiorapido.app/sitemap.xml");
+  });
+
+  it("blocks indexing on vercel preview origins when indexable is omitted or false", () => {
+    const robots = buildRobotsTxt("https://cambio-rapido-astro-preview.vercel.app");
+    expect(robots).toContain("User-agent: *");
+    expect(robots).toContain("Disallow: /");
+    expect(robots).not.toContain("Allow: /");
+    expect(robots).not.toContain("Sitemap:");
   });
 
   it("generates valid sitemap XML containing all 8 public routes and no API endpoints", () => {
@@ -153,3 +275,4 @@ describe("robots.txt & sitemap.xml", () => {
     expect(xml).not.toContain("/api/");
   });
 });
+

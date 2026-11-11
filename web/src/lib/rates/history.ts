@@ -203,6 +203,71 @@ function isPageFetcher(value: unknown): value is HistoryPageFetcher {
   return typeof value === "function";
 }
 
+const LOOKBACK_DAYS = 14;
+
+/**
+ * Builds an inclusive contiguous sequence of YYYY-MM-DD Caracas calendar days.
+ */
+export function buildContinuousDailyTimeline(
+  startDayKey: string,
+  endDayKey: string,
+): string[] {
+  const startMs = getCaracasDayStartMs(startDayKey);
+  const endMs = getCaracasDayStartMs(endDayKey);
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || startMs > endMs) {
+    return [];
+  }
+  const days: string[] = [];
+  for (let ms = startMs; ms <= endMs; ms += DAY_MS) {
+    days.push(getCaracasDayKey(ms));
+  }
+  return days;
+}
+
+/**
+ * Fills missing weekend/holiday days in a daily history series by carrying forward
+ * the previous active rate across `[startDayKey .. endDayKey]`.
+ */
+export function fillMissingDailyRates(
+  points: HistoryPoint[],
+  startDayKey: string,
+  endDayKey: string,
+  initialCarryRate: number | null = null,
+): HistoryPoint[] {
+  const pointByDay = new Map<string, number>();
+  let seedRate =
+    initialCarryRate !== null && Number.isFinite(initialCarryRate) && initialCarryRate > 0
+      ? initialCarryRate
+      : null;
+
+  const sortedPoints = [...points].sort((a, b) => a.date.localeCompare(b.date));
+  for (const pt of sortedPoints) {
+    const rate = Number(pt.rate);
+    if (!Number.isFinite(rate) || rate <= 0 || !pt.date) continue;
+    const dayKey = getCaracasDayKey(pt.date);
+    pointByDay.set(dayKey, rate);
+    if (dayKey < startDayKey) {
+      seedRate = rate;
+    }
+  }
+
+  const timeline = buildContinuousDailyTimeline(startDayKey, endDayKey);
+  const filled: HistoryPoint[] = [];
+  let lastKnown = seedRate;
+
+  for (const dayKey of timeline) {
+    const exactRate = pointByDay.get(dayKey);
+    if (exactRate !== undefined) {
+      lastKnown = exactRate;
+    }
+    if (lastKnown !== null && Number.isFinite(lastKnown) && lastKnown > 0) {
+      filled.push({ date: dayKey, rate: lastKnown });
+    }
+  }
+
+  return filled;
+}
+
 export async function fetchRatesHistory(
   currencyIds: number[],
   days: number = 30,
@@ -237,10 +302,46 @@ export async function fetchRatesHistory(
     };
   }
 
+  const safeDays = Math.max(1, Math.min(60, Math.floor(days)));
+  const endDayKey = getCaracasDayKey(now);
+  const startDayMs = getCaracasDayStartMs(now) - (safeDays - 1) * DAY_MS;
+  const startDayKey = getCaracasDayKey(startDayMs);
+
   const settled = await Promise.allSettled(
     uniqueIds.map(async (id) => {
-      const points = await fetchPaginatedHistory(fetcher!, id, days, now);
-      return [id, points] as const;
+      const rawPoints = await fetchPaginatedHistory(fetcher!, id, safeDays, now);
+      let initialCarryRate: number | null = null;
+
+      if (rawPoints.length === 0 || rawPoints[0].date > startDayKey) {
+        try {
+          const lookbackStartKey = getCaracasDayKey(startDayMs - LOOKBACK_DAYS * DAY_MS);
+          const lookbackEndKey = getCaracasDayKey(startDayMs - DAY_MS);
+          const { data, error } = await fetcher!({
+            currencyId: id,
+            startIso: `${lookbackStartKey}T00:00:00`,
+            endIso: `${lookbackEndKey}T23:59:59`,
+            from: 0,
+            to: 19,
+            ascending: false,
+          });
+          if (!error && data && data.length > 0) {
+            const lookbackDaily = aggregateDailyHistory(data);
+            if (lookbackDaily.length > 0) {
+              initialCarryRate = lookbackDaily[lookbackDaily.length - 1].rate;
+            }
+          }
+        } catch {
+          // Optional lookback failure should not discard already-fetched window points
+        }
+      }
+
+      const filledPoints = fillMissingDailyRates(
+        rawPoints,
+        startDayKey,
+        endDayKey,
+        initialCarryRate,
+      );
+      return [id, filledPoints] as const;
     }),
   );
 

@@ -70,14 +70,15 @@ const { rates, initialCurrencyId = 1 } = Astro.props;
     width: 100%;
     max-height: 92dvh;
     min-height: 75dvh;
-    background-color: var(--cr-bg);
+    border: 0;
+    background-color: var(--cr-surface);
     color: var(--cr-text);
-    border-top-left-radius: 24px;
-    border-top-right-radius: 24px;
+    border-top-left-radius: 1.5rem;
+    border-top-right-radius: 1.5rem;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.25);
+    box-shadow: var(--cr-shadow-lg);
     transition: transform 180ms ease;
     contain: layout style;
   }
@@ -93,7 +94,7 @@ const { rates, initialCurrencyId = 1 } = Astro.props;
     width: 36px;
     height: 5px;
     border-radius: 999px;
-    background-color: var(--cr-border);
+    background-color: var(--cr-tray-hover);
     margin: 0 auto 0.5rem;
   }
 
@@ -107,8 +108,10 @@ const { rates, initialCurrencyId = 1 } = Astro.props;
   .dialog-title {
     margin: 0.25rem 0 0;
     padding-inline: 2.5rem;
+    font-family: var(--font-headline);
     font-size: 1.125rem;
-    font-weight: 600;
+    font-weight: 700;
+    letter-spacing: -0.02em;
     text-align: center;
     color: var(--cr-text);
   }
@@ -118,26 +121,28 @@ const { rates, initialCurrencyId = 1 } = Astro.props;
     right: 0;
     top: 50%;
     transform: translateY(-50%);
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
     border: 0;
-    background-color: var(--cr-border);
+    background-color: var(--cr-tray);
     color: var(--cr-text-secondary);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    touch-action: manipulation;
+    transition: background-color 140ms ease, color 140ms ease;
   }
 
   .close-btn::after {
     content: "";
     position: absolute;
-    inset: -8px;
+    inset: -6px;
   }
 
   .close-btn:hover {
-    background-color: var(--cr-border-focus);
+    background-color: var(--cr-tray-hover);
     color: var(--cr-text);
   }
 
@@ -145,6 +150,10 @@ const { rates, initialCurrencyId = 1 } = Astro.props;
     .close-btn {
       width: 36px;
       height: 36px;
+    }
+
+    .close-btn::after {
+      inset: -4px;
     }
   }
 
@@ -165,15 +174,14 @@ const { rates, initialCurrencyId = 1 } = Astro.props;
       width: min(480px, calc(100dvw - 2rem));
       min-height: auto;
       max-height: 85dvh;
-      border-radius: 16px;
-      border: 1px solid var(--cr-border);
-      background-color: var(--cr-bg-secondary);
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+      border-radius: 1.25rem;
+      border: 0;
+      background-color: var(--cr-surface);
+      box-shadow: var(--cr-shadow-lg);
     }
 
     .dialog-header {
-      padding: 1rem 1.5rem 0.75rem;
-      border-bottom: 1px solid var(--cr-border);
+      padding: 1.125rem 1.5rem 0.625rem;
       cursor: default;
       touch-action: auto;
     }
@@ -194,11 +202,39 @@ const { rates, initialCurrencyId = 1 } = Astro.props;
 
     .close-btn {
       position: relative;
+      top: auto;
       transform: none;
     }
 
     .dialog-scroll {
-      padding: 0.75rem 1.5rem 1.5rem;
+      padding: 0.5rem 1.5rem 1.5rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dialog-sheet,
+    .close-btn {
+      transition: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .dialog-sheet {
+      border: 1px solid ButtonBorder !important;
+    }
+
+    .drag-handle {
+      background-color: ButtonText;
+    }
+
+    .close-btn {
+      border: 1px solid ButtonBorder !important;
+      background-color: ButtonFace;
+      color: ButtonText;
+    }
+
+    .close-btn:focus-visible {
+      outline: 2px solid Highlight !important;
     }
   }
 </style>

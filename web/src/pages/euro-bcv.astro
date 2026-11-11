@@ -3,10 +3,17 @@ import Breadcrumbs from "@/components/Breadcrumbs.astro";
 import CalculatorCard from "@/components/CalculatorCard.astro";
 import EquivalenceTable from "@/components/EquivalenceTable.astro";
 import FaqSection from "@/components/FaqSection.astro";
+import ArrowRight from "@/components/icons/ArrowRight.astro";
 import RateHistoryDrawer from "@/components/RateHistoryDrawer.astro";
 import RateHistoryPanel from "@/components/RateHistoryPanel.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import { formatCaracasTimestamp } from "@/lib/rates/caracas-date";
+import {
+  formatNaturalCaracasDateTime,
+  formatNaturalFutureCaracasDate,
+  formatSimpleCaracasDate,
+  shouldIncludeTimeForRate,
+  toCaracasIsoString,
+} from "@/lib/rates/caracas-date";
 import { formatCurrency } from "@/lib/rates/format";
 import { fetchRatesHistory } from "@/lib/rates/history";
 import { fetchLatestRatesSnapshot } from "@/lib/rates/supabase";
@@ -38,9 +45,11 @@ const schemas = buildStructuredData({
   breadcrumbs,
   faqs,
   updatedAtIso: snapshot.updatedAtIso,
+  rates: snapshot.rates,
 });
 
 const eurBcv = snapshot.rates.find((r) => r.currencyId === 2) ?? null;
+const eurBcvIncludeTime = shouldIncludeTimeForRate(eurBcv);
 ---
 
 <BaseLayout meta={meta} schemas={schemas}>
@@ -52,36 +61,105 @@ const eurBcv = snapshot.rates.find((r) => r.currencyId === 2) ?? null;
       initialCurrencyId={2}
       cardTitle="Euro BCV hoy"
       asH1={true}
+      logoVariant="flat"
+      subtitle="Conversión directa con la referencia oficial Euro publicada por el Banco Central de Venezuela"
+      metaSourceLabel="Tasa activa"
+      showTrendButton={false}
     />
   </div>
 
-  <div class="below-fold-container">
+  <div class="cr-page-shell subpage-stack">
     {
       eurBcv && (
-        <section class="info-card" aria-labelledby="euro-validity-heading">
-          <h2 id="euro-validity-heading" class="section-heading">
-            Tasa oficial Euro BCV vigente en Venezuela
-          </h2>
-          <p class="section-text">
-            El tipo de cambio oficial del <strong>Euro BCV (€)</strong> vigente hoy es{" "}
-            <strong>{formatCurrency(eurBcv.effectiveRate, "Bs")}</strong> (actualizado:{" "}
-            {formatCaracasTimestamp(eurBcv.effectiveDate)}).
-          </p>
+        <section class="cr-card info-card" aria-labelledby="euro-validity-heading">
+          <div class="info-card-header">
+            <h2 id="euro-validity-heading" class="cr-section-heading">
+              Tasa oficial Euro BCV vigente en Venezuela
+            </h2>
+            <p class="section-text">
+              El tipo de cambio oficial del <strong>Euro BCV (€)</strong> vigente hoy es{" "}
+              <strong>{formatCurrency(eurBcv.effectiveRate, "Bs")}</strong> (actualizado:{" "}
+              <time
+                data-live-time
+                data-raw-date={eurBcv.effectiveDate}
+                data-include-time={String(eurBcvIncludeTime)}
+                datetime={toCaracasIsoString(eurBcv.effectiveDate, eurBcvIncludeTime)}
+              >
+                {formatNaturalCaracasDateTime(eurBcv.effectiveDate, undefined, {
+                  includeTime: eurBcvIncludeTime,
+                })}
+              </time>).
+            </p>
+          </div>
+
+          <div class="summary-strip">
+            <div class="summary-tile">
+              <span class="summary-label">Tasa vigente</span>
+              <strong class="summary-val">
+                {formatCurrency(eurBcv.effectiveRate, "Bs")}
+              </strong>
+              <span class="summary-meta">
+                <span class="summary-dot" aria-hidden="true" />
+                <span>Vigencia oficial BCV</span>
+              </span>
+            </div>
+
+            <div class="summary-tile">
+              <span class="summary-label">Fecha valor Caracas</span>
+              <strong class="summary-val is-timestamp">
+                <time
+                  data-live-time
+                  data-raw-date={eurBcv.effectiveDate}
+                  data-include-time={String(eurBcvIncludeTime)}
+                  datetime={toCaracasIsoString(eurBcv.effectiveDate, eurBcvIncludeTime)}
+                >
+                  {formatNaturalCaracasDateTime(eurBcv.effectiveDate, undefined, {
+                    includeTime: eurBcvIncludeTime,
+                  })}
+                </time>
+              </strong>
+              <span class="summary-meta">
+                {formatSimpleCaracasDate(eurBcv.effectiveDate)} · Horario oficial (VET)
+              </span>
+            </div>
+          </div>
+
           {eurBcv.hasNextRate && eurBcv.nextRate !== null && eurBcv.nextDate && (
             <p class="next-rate-pill">
-              Próxima tasa Euro BCV publicada:{" "}
-              <strong>{formatCurrency(eurBcv.nextRate, "Bs")}</strong> (entra en vigencia el{" "}
-              {formatCaracasTimestamp(eurBcv.nextDate)} automáticamente).
+              <span class="next-rate-dot" aria-hidden="true" />
+              <span>
+                Próxima tasa Euro BCV publicada:{" "}
+                <strong>{formatCurrency(eurBcv.nextRate, "Bs")}</strong> (entra en vigencia{" "}
+                <time
+                  data-live-time
+                  data-live-future="true"
+                  data-raw-date={eurBcv.nextDate}
+                  data-include-time="false"
+                  datetime={toCaracasIsoString(eurBcv.nextDate, false)}
+                >
+                  {formatNaturalFutureCaracasDate(eurBcv.nextDate)}
+                </time>{" "}
+                automáticamente).
+              </span>
             </p>
           )}
+
+          <p class="section-text">
+            Calculada por el BCV a partir del cruce internacional EUR/USD aplicado al tipo oficial en bolívares, sirve de referencia para aranceles, trámites públicos, contratos y comercios que fijan precios en euros.
+          </p>
         </section>
       )
     }
 
     <section class="seo-section" aria-labelledby="euro-eq-heading">
-      <h2 id="euro-eq-heading" class="section-heading">
-        Equivalencias de Euros BCV a Bolívares
-      </h2>
+      <div class="section-intro">
+        <h2 id="euro-eq-heading" class="cr-section-heading">
+          Equivalencias de Euros BCV a Bolívares
+        </h2>
+        <p class="cr-section-sub">
+          Montos frecuentes convertidos al instante con la referencia oficial Euro BCV.
+        </p>
+      </div>
       <EquivalenceTable
         id="euro-eq-caption"
         caption="Conversión de montos frecuentes en Euros oficiales BCV a Bolívares"
@@ -89,14 +167,15 @@ const eurBcv = snapshot.rates.find((r) => r.currencyId === 2) ?? null;
       />
     </section>
 
-    <section class="info-card" aria-labelledby="euro-trend-heading">
-      <h2 id="euro-trend-heading" class="section-heading">
+    <section class="cr-card info-card" aria-labelledby="euro-trend-heading">
+      <h2 id="euro-trend-heading" class="cr-section-heading">
         Variación del Euro BCV últimos 7 días
       </h2>
       <RateHistoryPanel
         id="euro-page-history"
         rates={snapshot.rates}
         initialCurrencyId={2}
+        variant="currency"
         defaultDays={7}
         defaultSources={[2]}
         initialHistory={history.series}
@@ -107,11 +186,40 @@ const eurBcv = snapshot.rates.find((r) => r.currencyId === 2) ?? null;
 
     <FaqSection faqs={faqs} title="Preguntas frecuentes sobre el Euro BCV" />
 
-    <nav aria-label="Páginas relacionadas" class="cross-links">
-      <a href="/dolar-bcv" class="cross-link-btn">Ver Dólar BCV hoy →</a>
-      <a href="/usdt-binance" class="cross-link-btn">Ver USDT Binance P2P →</a>
-      <a href="/tendencias" class="cross-link-btn">Comparar 30 días en Tendencias →</a>
-    </nav>
+    <section class="cross-links-section" aria-labelledby="euro-related-heading">
+      <h2 id="euro-related-heading" class="cr-section-heading">
+        También te puede interesar
+      </h2>
+      <nav aria-label="Páginas relacionadas" class="cross-links">
+        <a href="/dolar-bcv" class="cross-link-btn">
+          <span class="cross-link-copy">
+            <span class="cross-link-title">Dólar BCV hoy</span>
+            <span class="cross-link-sub">Tasa oficial en dólares</span>
+          </span>
+          <span class="cross-link-arrow" aria-hidden="true">
+            <ArrowRight size={16} />
+          </span>
+        </a>
+        <a href="/usdt-binance" class="cross-link-btn">
+          <span class="cross-link-copy">
+            <span class="cross-link-title">USDT Binance P2P</span>
+            <span class="cross-link-sub">Venta y compra en bolívares</span>
+          </span>
+          <span class="cross-link-arrow" aria-hidden="true">
+            <ArrowRight size={16} />
+          </span>
+        </a>
+        <a href="/tendencias" class="cross-link-btn">
+          <span class="cross-link-copy">
+            <span class="cross-link-title">Comparar 30 días en Tendencias</span>
+            <span class="cross-link-sub">Historial comparativo de tasas</span>
+          </span>
+          <span class="cross-link-arrow" aria-hidden="true">
+            <ArrowRight size={16} />
+          </span>
+        </a>
+      </nav>
+    </section>
   </div>
 
   <RateHistoryDrawer rates={snapshot.rates} initialCurrencyId={2} />
@@ -119,38 +227,36 @@ const eurBcv = snapshot.rates.find((r) => r.currencyId === 2) ?? null;
 
 <style>
   .subroute-hero {
-    padding-block: 0.75rem 1.75rem;
+    padding-block: 1rem 1.75rem;
   }
 
-  .below-fold-container {
-    max-width: 820px;
-    margin-inline: auto;
-    padding: 0 clamp(0.75rem, 3.5vw, 1rem) 3.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
+  .subpage-stack {
+    gap: 2.75rem;
   }
 
   .seo-section,
-  .info-card {
+  .info-card,
+  .cross-links-section {
     display: flex;
     flex-direction: column;
-    gap: 0.875rem;
+    gap: 1rem;
+  }
+
+  .section-intro {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
   }
 
   .info-card {
-    padding: clamp(0.875rem, 3.5vw, 1.25rem);
-    border-radius: 14px;
-    border: 1px solid var(--cr-border);
-    background-color: var(--cr-bg-secondary);
+    padding: clamp(1.25rem, 3.5vw, 1.75rem);
+    border: 0;
   }
 
-  .section-heading {
-    margin: 0;
-    font-size: clamp(1.125rem, 3vw, 1.25rem);
-    font-weight: 700;
-    color: var(--cr-text);
-    text-wrap: balance;
+  .info-card-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
   }
 
   .section-text {
@@ -165,41 +271,184 @@ const eurBcv = snapshot.rates.find((r) => r.currencyId === 2) ?? null;
     color: var(--cr-text);
   }
 
+  .summary-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+    gap: 0.75rem;
+  }
+
+  .summary-tile {
+    background-color: var(--cr-tray-inner);
+    border-radius: 0.75rem;
+    border: 0;
+    padding: 1rem 1.125rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3125rem;
+    min-inline-size: 0;
+  }
+
+  .summary-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--cr-text-muted);
+  }
+
+  .summary-val {
+    font-family: var(--font-headline);
+    font-size: clamp(1.25rem, 3.5vw, 1.5rem);
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.025em;
+    color: var(--cr-text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .summary-val.is-timestamp {
+    font-size: clamp(1.0625rem, 3vw, 1.25rem);
+    font-weight: 700;
+  }
+
+  .summary-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4375rem;
+    margin-top: 0.125rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--cr-text-secondary);
+  }
+
+  .summary-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: var(--cr-primary);
+    flex-shrink: 0;
+  }
+
   .next-rate-pill {
     margin: 0;
-    padding: 0.75rem clamp(0.75rem, 3vw, 1rem);
-    border-radius: 10px;
-    border: 1px solid var(--cr-primary);
-    background-color: color-mix(in srgb, var(--cr-primary) 10%, var(--cr-bg));
+    padding: 0.8125rem 1rem;
+    border-radius: 0.75rem;
+    border: 0;
+    background-color: color-mix(in srgb, var(--cr-primary) 12%, transparent);
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
     font-size: 0.875rem;
     line-height: 1.5;
     color: var(--cr-text);
     text-wrap: pretty;
   }
 
+  .next-rate-pill strong {
+    color: var(--cr-primary-ink);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .next-rate-dot {
+    width: 7px;
+    height: 7px;
+    margin-top: 0.4375rem;
+    border-radius: 50%;
+    background-color: var(--cr-primary);
+    flex-shrink: 0;
+  }
+
   .cross-links {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr));
-    gap: 0.625rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+    gap: 0.75rem;
   }
 
   .cross-link-btn {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: space-between;
-    min-block-size: 44px;
-    padding: 0.625rem 0.9375rem;
-    border-radius: 10px;
-    border: 1px solid var(--cr-border);
-    background-color: var(--cr-bg-secondary);
-    color: var(--cr-primary);
-    font-size: 0.875rem;
-    font-weight: 600;
+    gap: 0.875rem;
+    min-block-size: 56px;
+    padding: 1rem 1.25rem;
+    border-radius: 1rem;
+    border: 0;
+    background-color: var(--cr-surface);
+    box-shadow: var(--cr-shadow);
+    color: var(--cr-text);
     text-decoration: none;
+    transition: background-color 150ms ease, transform 120ms ease;
   }
 
   .cross-link-btn:hover {
-    border-color: var(--cr-primary);
-    background-color: var(--cr-bg-focus);
+    background-color: var(--cr-surface-hover);
+  }
+
+  .cross-link-btn:active {
+    transform: scale(0.99);
+  }
+
+  .cross-link-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-inline-size: 0;
+  }
+
+  .cross-link-title {
+    font-family: var(--font-headline);
+    font-size: 0.875rem;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--cr-text);
+  }
+
+  .cross-link-sub {
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.35;
+    color: var(--cr-text-secondary);
+  }
+
+  .cross-link-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--cr-text-muted);
+    flex-shrink: 0;
+    transition: transform 150ms ease, color 150ms ease;
+  }
+
+  .cross-link-btn:hover .cross-link-arrow {
+    color: var(--cr-text);
+    transform: translateX(2px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cross-link-btn,
+    .cross-link-arrow {
+      transition: none;
+    }
+
+    .cross-link-btn:active,
+    .cross-link-btn:hover .cross-link-arrow {
+      transform: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .info-card,
+    .summary-tile,
+    .next-rate-pill,
+    .cross-link-btn {
+      border: 1px solid ButtonBorder;
+    }
+
+    .summary-dot,
+    .next-rate-dot {
+      background-color: Highlight;
+      border: 1px solid CanvasText;
+    }
   }
 </style>

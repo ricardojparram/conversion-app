@@ -1,4 +1,4 @@
-import { formatCaracasTimestamp } from "@/lib/rates/caracas-date";
+import { shouldIncludeTimeForRate } from "@/lib/rates/caracas-date";
 import { centsToNumber } from "@/lib/rates/calculator";
 import { formatCurrency, formatNumber } from "@/lib/rates/format";
 import type { ResolvedRate } from "@/lib/rates/types";
@@ -6,13 +6,14 @@ import {
   applyClipboardValue,
   createCalculatorState,
   getActiveCurrencyMeta,
-  getActiveRateDate,
+  getSelectedRate,
   inputDigitsForField,
   resetOnFocus,
   selectSource,
   updateRatesSnapshot,
   type CalculatorState,
 } from "./calculator-state";
+import { syncLiveTimeElement } from "./live-time";
 
 const CACHED_RATES_KEY = "cached_rates";
 
@@ -114,13 +115,15 @@ function setupCalculatorRoot(root: HTMLElement): void {
   }
 
   const initialCurrencyId = Number(root.dataset.initialCurrencyId ?? "0") || undefined;
+  const hadSsrRates = parsedRates.length > 0;
 
-  if (parsedRates.length > 0) {
+  if (hadSsrRates) {
     saveRatesCache(parsedRates);
   } else {
     parsedRates = loadRatesCache();
   }
 
+  let isSilentRecoveryPending = !hadSsrRates && parsedRates.length === 0 && (typeof navigator === "undefined" || navigator.onLine !== false);
   let state: CalculatorState = createCalculatorState(parsedRates, initialCurrencyId);
 
   const bsInput = root.querySelector<HTMLInputElement>("#calc-bs-input");
@@ -129,6 +132,9 @@ function setupCalculatorRoot(root: HTMLElement): void {
   const foreignDisplay = root.querySelector<HTMLElement>('[data-display="foreign"]');
   const foreignLabel = root.querySelector<HTMLElement>("[data-foreign-label]");
   const foreignPrefix = root.querySelector<HTMLElement>("[data-foreign-prefix]");
+  const inputsStack = root.querySelector<HTMLElement>("[data-inputs-stack]");
+  const swapBtn = root.querySelector<HTMLButtonElement>("[data-swap-btn]");
+  const dirLeftEl = root.querySelector<HTMLElement>("[data-calc-dir-left]");
   const targetLabelEl = root.querySelector<HTMLElement>("[data-calc-target-label]");
   const updatedAtEl = root.querySelector<HTMLElement>("[data-updated-at]");
   const sourcesGrid = root.querySelector<HTMLElement>("[data-sources-grid]");
@@ -138,6 +144,8 @@ function setupCalculatorRoot(root: HTMLElement): void {
   const offlineBanner = root.querySelector<HTMLElement>("[data-offline-banner]");
 
   if (!bsInput || !foreignInput || !bsDisplay || !foreignDisplay) return;
+
+  let isSwapped = inputsStack?.dataset.swapped === "true";
 
   let toastTimer: number | undefined;
   const showToast = (variant: "success" | "error", text: string) => {
@@ -164,7 +172,7 @@ function setupCalculatorRoot(root: HTMLElement): void {
         .map((r, i) => {
           const isOddLast = (i + 1) % 2 === 1 && i + 1 === total;
           const isActive = r.currencyId === state.selectedCurrencyId;
-          return `<button type="button" data-source-card data-currency-id="${r.currencyId}" aria-pressed="${isActive}" class="source-card${isActive ? " is-active" : ""}${isOddLast ? " is-full-span" : ""}"><span class="source-name"></span><span class="source-rate"></span></button>`;
+          return `<button type="button" data-source-card data-currency-id="${r.currencyId}" aria-pressed="${isActive}" class="source-card${isActive ? " is-active" : ""}${isOddLast ? " is-full-span" : ""}"><span class="source-card-top"><span class="source-name"></span><span class="source-check" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#ffffff"/><path d="m8.5 12.2 2.3 2.3 4.7-4.8" stroke="var(--cr-primary, #16a249)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span><span class="source-rate"></span></button>`;
         })
         .join("");
 
@@ -207,17 +215,41 @@ function setupCalculatorRoot(root: HTMLElement): void {
 
     if (foreignLabel) foreignLabel.textContent = targetLabel;
     if (foreignPrefix) foreignPrefix.textContent = suffix;
-    if (targetLabelEl) targetLabelEl.textContent = targetLabel;
+
+    if (inputsStack) {
+      inputsStack.dataset.swapped = isSwapped ? "true" : "false";
+    }
+    if (swapBtn) {
+      swapBtn.setAttribute("aria-pressed", isSwapped ? "true" : "false");
+    }
+    if (dirLeftEl && targetLabelEl) {
+      if (isSwapped) {
+        dirLeftEl.textContent = "Bolívares";
+        targetLabelEl.textContent = targetLabel;
+      } else {
+        dirLeftEl.textContent = targetLabel;
+        targetLabelEl.textContent = "Bolívares";
+      }
+    } else if (dirLeftEl) {
+      dirLeftEl.textContent = targetLabel;
+    }
 
     if (updatedAtEl) {
-      const activeDate = getActiveRateDate(state);
-      updatedAtEl.textContent = activeDate
-        ? formatCaracasTimestamp(activeDate)
-        : "Sin conexión";
+      const selectedRate = getSelectedRate(state);
+      syncLiveTimeElement(
+        updatedAtEl,
+        selectedRate ? selectedRate.effectiveDate : null,
+        {
+          includeTime: selectedRate
+            ? shouldIncludeTimeForRate(selectedRate)
+            : undefined,
+          emptyText: "Sin conexión",
+        },
+      );
     }
 
     if (offlineBanner) {
-      offlineBanner.hidden = state.rates.length > 0;
+      offlineBanner.hidden = state.rates.length > 0 || isSilentRecoveryPending;
     }
 
     if (openHistoryBtn) {
@@ -443,7 +475,12 @@ function setupCalculatorRoot(root: HTMLElement): void {
 
   const refreshRatesFromApi = async (notifyUser: boolean) => {
     if (typeof navigator !== "undefined" && navigator.onLine === false) {
-      if (notifyUser) showToast("error", "Sin conexión");
+      if (notifyUser) {
+        showToast("error", "Sin conexión");
+      } else {
+        isSilentRecoveryPending = false;
+        render();
+      }
       return;
     }
     if (refreshBtn) refreshBtn.setAttribute("data-loading", "true");
@@ -454,16 +491,33 @@ function setupCalculatorRoot(root: HTMLElement): void {
       if (!payload.ok || !Array.isArray(payload.rates) || payload.rates.length === 0) {
         throw new Error("Empty payload");
       }
+      isSilentRecoveryPending = false;
       saveRatesCache(payload.rates);
       state = updateRatesSnapshot(state, payload.rates);
       render();
       if (notifyUser) showToast("success", "Actualizado");
     } catch {
+      isSilentRecoveryPending = false;
+      render();
       if (notifyUser) showToast("error", "Error al actualizar");
     } finally {
+      isSilentRecoveryPending = false;
       if (refreshBtn) refreshBtn.removeAttribute("data-loading");
     }
   };
+
+  if (swapBtn) {
+    swapBtn.addEventListener("click", () => {
+      isSwapped = !isSwapped;
+      render();
+      const { targetLabel } = getActiveCurrencyMeta(state);
+      announce(
+        isSwapped
+          ? `Orden invertido: Bolívares a ${targetLabel}`
+          : `Orden restaurado: ${targetLabel} a Bolívares`,
+      );
+    });
+  }
 
   if (refreshBtn) {
     refreshBtn.addEventListener("click", () => {
@@ -486,8 +540,8 @@ function setupCalculatorRoot(root: HTMLElement): void {
 
   render();
 
-  // If SSR degraded with empty rates, try silent auto-recovery on client load
-  if (parsedRates.length === 0) {
+  // If SSR degraded with empty rates, quietly sync latest rates in background
+  if (!hadSsrRates) {
     void refreshRatesFromApi(false);
   }
 }

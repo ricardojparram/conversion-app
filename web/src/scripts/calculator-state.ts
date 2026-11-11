@@ -1,3 +1,4 @@
+import { getCaracasDayKey, getCaracasDayStartMs } from "@/lib/rates/caracas-date";
 import {
   centsToNumber,
   convertAmount,
@@ -190,6 +191,7 @@ export interface ChartPointCoord {
   y: number;
   rate: number;
   date: string;
+  dayKey: string;
 }
 
 export interface ChartSeriesItem {
@@ -211,22 +213,61 @@ export interface ChartSeriesItem {
 
 export interface ChartSeriesModel {
   series: ChartSeriesItem[];
+  timeline: string[];
   globalMin: number;
   globalMax: number;
+}
+
+const DAY_MS = 86_400_000;
+const MAX_CALENDAR_SPAN_DAYS = 120;
+
+function normalizeDayKey(dateStr: string): string {
+  try {
+    return getCaracasDayKey(dateStr);
+  } catch {
+    return dateStr.slice(0, 10);
+  }
+}
+
+function buildContiguousCalendarTimeline(
+  rawDayKeys: string[],
+  days: number,
+): string[] {
+  if (rawDayKeys.length === 0) return [];
+  const sorted = Array.from(new Set(rawDayKeys)).sort((a, b) => a.localeCompare(b));
+  const firstKey = sorted[0];
+  const lastKey = sorted[sorted.length - 1];
+
+  try {
+    const endMs = getCaracasDayStartMs(lastKey);
+    const naturalStartMs = getCaracasDayStartMs(firstKey);
+    const cappedStartMs = Math.max(
+      naturalStartMs,
+      endMs - (MAX_CALENDAR_SPAN_DAYS - 1) * DAY_MS,
+    );
+    const fullDays: string[] = [];
+    for (let ms = cappedStartMs; ms <= endMs; ms += DAY_MS) {
+      fullDays.push(getCaracasDayKey(ms));
+    }
+    return fullDays.slice(-days);
+  } catch {
+    return sorted.slice(-days);
+  }
 }
 
 export function getSourceChartColor(
   currencyId: number,
   currencyName: string,
 ): string {
+  // Validated against Light (#ffffff) and Dark (#0c1b29) chart surfaces
   if (currencyId === 1) return "#16a249";
-  if (currencyId === 2) return "#0d9488";
-  if (currencyId === 3) return "#ea4335";
-  if (currencyId === 4) return "#2563eb";
+  if (currencyId === 2) return "#2563eb";
+  if (currencyId === 3) return "#d97706";
+  if (currencyId === 4) return "#db2777";
 
   const lower = currencyName.toLowerCase();
   if (lower.includes("bcv")) return "#16a249";
-  if (lower.includes("paralelo") || lower.includes("venta")) return "#ea4335";
+  if (lower.includes("paralelo") || lower.includes("venta")) return "#d97706";
   return "#2563eb";
 }
 
@@ -245,39 +286,86 @@ export function buildChartSeriesModel({
   historyByCurrency: HistorySeries;
   days: 7 | 15 | 30;
 }): ChartSeriesModel {
-  const sliced = selectedSources.map((id) => {
+  const collectedDayKeys: string[] = [];
+  const prepared = selectedSources.map((id) => {
     const raw: HistoryPoint[] = historyByCurrency[id] || [];
-    const points = raw.slice(-days);
+    const sorted = [...raw].sort((a, b) => a.date.localeCompare(b.date));
+    const map = new Map<string, number>();
+    for (const pt of sorted) {
+      const rate = Number(pt.rate);
+      if (!Number.isFinite(rate) || rate <= 0 || !pt.date) continue;
+      const dayKey = normalizeDayKey(pt.date);
+      map.set(dayKey, rate);
+      collectedDayKeys.push(dayKey);
+    }
     const meta = rates.find((r) => r.currencyId === id);
     const name = meta ? meta.currencyName : `Fuente ${id}`;
-    return { id, points, name };
+    return { id, map, name };
+  });
+
+  if (collectedDayKeys.length === 0) {
+    return { series: [], timeline: [], globalMin: 0, globalMax: 0 };
+  }
+
+  const timeline = buildContiguousCalendarTimeline(collectedDayKeys, days);
+  if (timeline.length === 0) {
+    return { series: [], timeline: [], globalMin: 0, globalMax: 0 };
+  }
+  const firstTimelineKey = timeline[0];
+
+  const filledSeries = prepared.map((item) => {
+    let lastKnown: number | null = null;
+    let bestSeedDay = "";
+    for (const [dayKey, rate] of item.map.entries()) {
+      if (dayKey < firstTimelineKey && dayKey >= bestSeedDay) {
+        bestSeedDay = dayKey;
+        lastKnown = rate;
+      }
+    }
+
+    const points: Array<{ dayKey: string; rate: number; dayIdx: number }> = [];
+    timeline.forEach((dayKey, dayIdx) => {
+      const exact = item.map.get(dayKey);
+      if (exact !== undefined) {
+        lastKnown = exact;
+      }
+      if (lastKnown !== null) {
+        points.push({ dayKey, rate: lastKnown, dayIdx });
+      }
+    });
+
+    return {
+      id: item.id,
+      name: item.name,
+      points,
+    };
   });
 
   const allValues: number[] = [];
-  for (const item of sliced) {
+  for (const item of filledSeries) {
     for (const pt of item.points) {
-      if (Number.isFinite(pt.rate)) allValues.push(pt.rate);
+      allValues.push(pt.rate);
     }
   }
 
   if (allValues.length === 0) {
-    return { series: [], globalMin: 0, globalMax: 0 };
+    return { series: [], timeline: [], globalMin: 0, globalMax: 0 };
   }
 
   const globalMin = Math.min(...allValues);
   const globalMax = Math.max(...allValues);
   const valRange = globalMax - globalMin === 0 ? 1 : globalMax - globalMin;
 
-  const series: ChartSeriesItem[] = sliced
+  const series: ChartSeriesItem[] = filledSeries
     .filter((item) => item.points.length > 0)
     .map((item) => {
-      const coords: ChartPointCoord[] = item.points.map((pt, index) => {
+      const coords: ChartPointCoord[] = item.points.map((pt) => {
         const x =
-          item.points.length > 1
-            ? 6 + (index / (item.points.length - 1)) * 288
+          timeline.length > 1
+            ? 6 + (pt.dayIdx / (timeline.length - 1)) * 288
             : 150;
         const y = 150 - ((pt.rate - globalMin) / valRange) * 110 - 20;
-        return { x, y, rate: pt.rate, date: pt.date };
+        return { x, y, rate: pt.rate, date: pt.dayKey, dayKey: pt.dayKey };
       });
 
       const linePath =
@@ -317,5 +405,5 @@ export function buildChartSeriesModel({
       };
     });
 
-  return { series, globalMin, globalMax };
+  return { series, timeline, globalMin, globalMax };
 }

@@ -48,9 +48,24 @@ export function initThemeToggle(): void {
 
   const mq = window.matchMedia("(prefers-color-scheme: dark)");
 
+  const syncAriaState = (content: string | null) => {
+    const rendered = resolveRenderedScheme(content, mq.matches);
+    const isDark = rendered === "dark";
+    toggleBtns.forEach((btn) => {
+      btn.setAttribute("aria-pressed", isDark ? "true" : "false");
+      btn.setAttribute(
+        "aria-label",
+        isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro",
+      );
+    });
+  };
+
   const applyMeta = (content: ColorSchemePreference) => {
     meta.setAttribute("content", content);
+    syncAriaState(content);
   };
+
+  syncAriaState(meta.getAttribute("content"));
 
   toggleBtns.forEach((toggleBtn) => {
     if (toggleBtn.dataset.themeInitialized === "true") return;
@@ -68,6 +83,10 @@ export function initThemeToggle(): void {
         // Safe no-op when storage is blocked in private mode
       }
     });
+  });
+
+  mq.addEventListener("change", () => {
+    syncAriaState(meta.getAttribute("content"));
   });
 
   window.addEventListener("storage", (event) => {

@@ -3,10 +3,15 @@ import Breadcrumbs from "@/components/Breadcrumbs.astro";
 import CalculatorCard from "@/components/CalculatorCard.astro";
 import EquivalenceTable from "@/components/EquivalenceTable.astro";
 import FaqSection from "@/components/FaqSection.astro";
+import ArrowRight from "@/components/icons/ArrowRight.astro";
 import RateHistoryDrawer from "@/components/RateHistoryDrawer.astro";
 import RateHistoryPanel from "@/components/RateHistoryPanel.astro";
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import { formatCaracasTimestamp } from "@/lib/rates/caracas-date";
+import {
+  formatNaturalCaracasDateTime,
+  shouldIncludeTimeForRate,
+  toCaracasIsoString,
+} from "@/lib/rates/caracas-date";
 import { formatCurrency } from "@/lib/rates/format";
 import { fetchRatesHistory } from "@/lib/rates/history";
 import { fetchLatestRatesSnapshot } from "@/lib/rates/supabase";
@@ -38,10 +43,15 @@ const schemas = buildStructuredData({
   breadcrumbs,
   faqs,
   updatedAtIso: snapshot.updatedAtIso,
+  rates: snapshot.rates,
 });
 
 const usdtSell = snapshot.rates.find((r) => r.currencyId === 3) ?? null;
 const usdtBuy = snapshot.rates.find((r) => r.currencyId === 4) ?? null;
+const usdtSellIncludeTime = shouldIncludeTimeForRate(usdtSell);
+const usdtBuyIncludeTime = shouldIncludeTimeForRate(usdtBuy);
+const p2pSpreadBs =
+  usdtSell && usdtBuy ? Math.abs(usdtBuy.effectiveRate - usdtSell.effectiveRate) : null;
 ---
 
 <BaseLayout meta={meta} schemas={schemas}>
@@ -53,16 +63,31 @@ const usdtBuy = snapshot.rates.find((r) => r.currencyId === 4) ?? null;
       initialCurrencyId={3}
       cardTitle="USDT Binance hoy"
       asH1={true}
+      logoVariant="flat"
+      subtitle="Referencias activas P2P (Venta y Compra)"
+      metaSourceLabel="Tasa activa"
+      showTrendButton={false}
     />
   </div>
 
-  <div class="below-fold-container">
+  <div class="cr-page-shell subpage-stack">
     {
       (usdtSell || usdtBuy) && (
-        <section class="info-card" aria-labelledby="usdt-pair-heading">
-          <h2 id="usdt-pair-heading" class="section-heading">
-            Referencias Binance P2P: Venta y Compra en Bolívares
-          </h2>
+        <section class="cr-card info-card" aria-labelledby="usdt-pair-heading">
+          <div class="info-card-header">
+            <h2 id="usdt-pair-heading" class="cr-section-heading">
+              Referencias Binance P2P: Venta y Compra en Bolívares
+            </h2>
+            <p class="section-text">
+              Promedios actualizados cada pocos minutos las 24 horas (incluyendo fines de semana y feriados) a partir de anuncios verificados en el mercado P2P de Binance Venezuela.
+              {p2pSpreadBs !== null && (
+                <>
+                  {" "}Diferencial actual entre Compra y Venta:{" "}
+                  <strong>{formatCurrency(p2pSpreadBs, "Bs")}</strong> por USDT.
+                </>
+              )}
+            </p>
+          </div>
           <div class="p2p-grid">
             {usdtSell && (
               <div class="p2p-box">
@@ -71,7 +96,17 @@ const usdtBuy = snapshot.rates.find((r) => r.currencyId === 4) ?? null;
                   {formatCurrency(usdtSell.effectiveRate, "Bs")}
                 </strong>
                 <span class="p2p-time">
-                  Actualizado: {formatCaracasTimestamp(usdtSell.effectiveDate)}
+                  Actualizado:{" "}
+                  <time
+                    data-live-time
+                    data-raw-date={usdtSell.effectiveDate}
+                    data-include-time={String(usdtSellIncludeTime)}
+                    datetime={toCaracasIsoString(usdtSell.effectiveDate, usdtSellIncludeTime)}
+                  >
+                    {formatNaturalCaracasDateTime(usdtSell.effectiveDate, undefined, {
+                      includeTime: usdtSellIncludeTime,
+                    })}
+                  </time>
                 </span>
               </div>
             )}
@@ -82,7 +117,17 @@ const usdtBuy = snapshot.rates.find((r) => r.currencyId === 4) ?? null;
                   {formatCurrency(usdtBuy.effectiveRate, "Bs")}
                 </strong>
                 <span class="p2p-time">
-                  Actualizado: {formatCaracasTimestamp(usdtBuy.effectiveDate)}
+                  Actualizado:{" "}
+                  <time
+                    data-live-time
+                    data-raw-date={usdtBuy.effectiveDate}
+                    data-include-time={String(usdtBuyIncludeTime)}
+                    datetime={toCaracasIsoString(usdtBuy.effectiveDate, usdtBuyIncludeTime)}
+                  >
+                    {formatNaturalCaracasDateTime(usdtBuy.effectiveDate, undefined, {
+                      includeTime: usdtBuyIncludeTime,
+                    })}
+                  </time>
                 </span>
               </div>
             )}
@@ -92,9 +137,14 @@ const usdtBuy = snapshot.rates.find((r) => r.currencyId === 4) ?? null;
     }
 
     <section class="seo-section" aria-labelledby="usdt-eq-heading">
-      <h2 id="usdt-eq-heading" class="section-heading">
-        Equivalencias de USDT a Bolívares
-      </h2>
+      <div class="section-intro">
+        <h2 id="usdt-eq-heading" class="cr-section-heading">
+          Equivalencias de USDT a Bolívares
+        </h2>
+        <p class="cr-section-sub">
+          Montos referenciales convertidos al promedio vigente de USDT Venta en Binance P2P.
+        </p>
+      </div>
       <EquivalenceTable
         id="usdt-eq-caption"
         caption="Conversión referencial de USDT Venta en Binance P2P a Bolívares"
@@ -102,14 +152,15 @@ const usdtBuy = snapshot.rates.find((r) => r.currencyId === 4) ?? null;
       />
     </section>
 
-    <section class="info-card" aria-labelledby="usdt-trend-heading">
-      <h2 id="usdt-trend-heading" class="section-heading">
+    <section class="cr-card info-card" aria-labelledby="usdt-trend-heading">
+      <h2 id="usdt-trend-heading" class="cr-section-heading">
         Evolución USDT Compra y Venta últimos 7 días
       </h2>
       <RateHistoryPanel
         id="usdt-page-history"
         rates={snapshot.rates}
         initialCurrencyId={3}
+        variant="currency"
         defaultDays={7}
         defaultSources={[3, 4]}
         initialHistory={history.series}
@@ -120,11 +171,40 @@ const usdtBuy = snapshot.rates.find((r) => r.currencyId === 4) ?? null;
 
     <FaqSection faqs={faqs} title="Preguntas frecuentes sobre USDT Binance P2P" />
 
-    <nav aria-label="Páginas relacionadas" class="cross-links">
-      <a href="/dolar-bcv" class="cross-link-btn">Ver Dólar BCV hoy →</a>
-      <a href="/brecha-cambiaria" class="cross-link-btn">Comparar brecha BCV vs USDT →</a>
-      <a href="/tendencias" class="cross-link-btn">Historial completo de 30 días →</a>
-    </nav>
+    <section class="cross-links-section" aria-labelledby="usdt-related-heading">
+      <h2 id="usdt-related-heading" class="cr-section-heading">
+        También te puede interesar
+      </h2>
+      <nav aria-label="Páginas relacionadas" class="cross-links">
+        <a href="/dolar-bcv" class="cross-link-btn">
+          <span class="cross-link-copy">
+            <span class="cross-link-title">Ver Dólar BCV hoy</span>
+            <span class="cross-link-sub">Tasa oficial del banco central</span>
+          </span>
+          <span class="cross-link-arrow" aria-hidden="true">
+            <ArrowRight size={16} />
+          </span>
+        </a>
+        <a href="/brecha-cambiaria" class="cross-link-btn">
+          <span class="cross-link-copy">
+            <span class="cross-link-title">Comparar brecha BCV vs USDT</span>
+            <span class="cross-link-sub">Simulador de diferencia cambiaria</span>
+          </span>
+          <span class="cross-link-arrow" aria-hidden="true">
+            <ArrowRight size={16} />
+          </span>
+        </a>
+        <a href="/tendencias" class="cross-link-btn">
+          <span class="cross-link-copy">
+            <span class="cross-link-title">Historial completo de 30 días</span>
+            <span class="cross-link-sub">Tendencias históricas en bolívares</span>
+          </span>
+          <span class="cross-link-arrow" aria-hidden="true">
+            <ArrowRight size={16} />
+          </span>
+        </a>
+      </nav>
+    </section>
   </div>
 
   <RateHistoryDrawer rates={snapshot.rates} initialCurrencyId={3} />
@@ -132,105 +212,178 @@ const usdtBuy = snapshot.rates.find((r) => r.currencyId === 4) ?? null;
 
 <style>
   .subroute-hero {
-    padding-block: 0.75rem 1.75rem;
+    padding-block: 1rem 1.75rem;
   }
 
-  .below-fold-container {
-    max-width: 820px;
-    margin-inline: auto;
-    padding: 0 clamp(0.75rem, 3.5vw, 1rem) 3.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
+  .subpage-stack {
+    gap: 2.75rem;
   }
 
   .seo-section,
-  .info-card {
+  .info-card,
+  .cross-links-section {
     display: flex;
     flex-direction: column;
-    gap: 0.875rem;
+    gap: 1rem;
+  }
+
+  .section-intro {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
   }
 
   .info-card {
-    padding: clamp(0.875rem, 3.5vw, 1.25rem);
-    border-radius: 14px;
-    border: 1px solid var(--cr-border);
-    background-color: var(--cr-bg-secondary);
+    padding: clamp(1.25rem, 3.5vw, 1.75rem);
+    border: 0;
   }
 
-  .section-heading {
+  .info-card-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .section-text {
     margin: 0;
-    font-size: clamp(1.125rem, 3vw, 1.25rem);
-    font-weight: 700;
-    color: var(--cr-text);
-    text-wrap: balance;
+    font-size: 0.9375rem;
+    line-height: 1.65;
+    color: var(--cr-text-secondary);
+    text-wrap: pretty;
   }
 
   .p2p-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
     gap: 0.75rem;
   }
 
   .p2p-box {
-    padding: clamp(0.75rem, 3vw, 0.9375rem) clamp(0.75rem, 3vw, 1rem);
-    border-radius: 10px;
-    border: 1px solid var(--cr-border);
-    background-color: var(--cr-bg);
+    padding: clamp(1rem, 3vw, 1.1875rem);
+    border-radius: 0.875rem;
+    border: 0;
+    background-color: var(--cr-tray-inner);
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.375rem;
     min-inline-size: 0;
   }
 
   .p2p-label {
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--cr-text-secondary);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--cr-text-muted);
   }
 
   .p2p-val {
-    font-size: 1.25rem;
-    font-weight: 700;
+    font-family: var(--font-headline);
+    font-size: clamp(1.375rem, 4vw, 1.625rem);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
     font-variant-numeric: tabular-nums;
   }
 
   .p2p-val.is-sell {
-    color: var(--cr-danger);
+    color: var(--cr-primary-ink);
   }
 
   .p2p-val.is-buy {
-    color: var(--cr-blue);
+    color: var(--cr-text);
   }
 
   .p2p-time {
     font-size: 0.75rem;
+    font-weight: 500;
     color: var(--cr-text-secondary);
+    font-variant-numeric: tabular-nums;
   }
 
   .cross-links {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr));
-    gap: 0.625rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+    gap: 0.75rem;
   }
 
   .cross-link-btn {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: space-between;
-    min-block-size: 44px;
-    padding: 0.625rem 0.9375rem;
-    border-radius: 10px;
-    border: 1px solid var(--cr-border);
-    background-color: var(--cr-bg-secondary);
-    color: var(--cr-primary);
-    font-size: 0.875rem;
-    font-weight: 600;
+    gap: 0.875rem;
+    min-block-size: 56px;
+    padding: 1rem 1.25rem;
+    border-radius: 1rem;
+    border: 0;
+    background-color: var(--cr-surface);
+    box-shadow: var(--cr-shadow);
+    color: var(--cr-text);
     text-decoration: none;
+    transition: background-color 150ms ease, transform 120ms ease;
   }
 
   .cross-link-btn:hover {
-    border-color: var(--cr-primary);
-    background-color: var(--cr-bg-focus);
+    background-color: var(--cr-surface-hover);
+  }
+
+  .cross-link-btn:active {
+    transform: scale(0.99);
+  }
+
+  .cross-link-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-inline-size: 0;
+  }
+
+  .cross-link-title {
+    font-family: var(--font-headline);
+    font-size: 0.875rem;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--cr-text);
+  }
+
+  .cross-link-sub {
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.35;
+    color: var(--cr-text-secondary);
+  }
+
+  .cross-link-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--cr-text-muted);
+    flex-shrink: 0;
+    transition: transform 150ms ease, color 150ms ease;
+  }
+
+  .cross-link-btn:hover .cross-link-arrow {
+    color: var(--cr-text);
+    transform: translateX(2px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cross-link-btn,
+    .cross-link-arrow {
+      transition: none;
+    }
+
+    .cross-link-btn:active,
+    .cross-link-btn:hover .cross-link-arrow {
+      transform: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .info-card,
+    .p2p-box,
+    .cross-link-btn {
+      border: 1px solid ButtonBorder;
+    }
   }
 </style>

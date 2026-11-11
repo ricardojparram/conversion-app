@@ -23,7 +23,7 @@ function collectFilesRecursive(dir: string): string[] {
 }
 
 describe("routes, endpoints, and SEO/MWG structural contracts", () => {
-  const staticPrerenderPages = ["preguntas-frecuentes.astro", "privacidad.astro"];
+  const staticPrerenderPages = ["preguntas-frecuentes.astro", "privacidad.astro", "404.astro"];
   const dynamicSsrPages = [
     "index.astro",
     "dolar-bcv.astro",
@@ -35,6 +35,7 @@ describe("routes, endpoints, and SEO/MWG structural contracts", () => {
   const dynamicEndpoints = [
     "robots.txt.ts",
     "sitemap.xml.ts",
+    path.join("og", "[route].png.ts"),
     path.join("api", "rates.json.ts"),
     path.join("api", "history.json.ts"),
   ];
@@ -112,6 +113,15 @@ describe("routes, endpoints, and SEO/MWG structural contracts", () => {
         `${rel} must declare exactly one H1 strategy`,
       ).toBe(1);
     }
+
+    const homeAstro = fs.readFileSync(path.join(PAGES_DIR, "index.astro"), "utf-8");
+    expect(homeAstro).toContain('titleTag="p"');
+    expect(homeAstro).not.toContain("brandLabel=");
+    expect(homeAstro).not.toMatch(/asH1=\{true\}/);
+    const h1Idx = homeAstro.search(/<h1[\s>]/);
+    const firstH2Idx = homeAstro.search(/<h2[\s>]/);
+    expect(h1Idx).toBeGreaterThan(-1);
+    expect(firstH2Idx).toBeGreaterThan(h1Idx);
   });
 
   it("executes endpoint GET handlers cleanly and avoids caching degraded errors as fresh", async () => {
@@ -163,10 +173,13 @@ describe("routes, endpoints, and SEO/MWG structural contracts", () => {
     expect(historyJson.currencyIds).toEqual([1, 3]);
   });
 
-  it("hides header on home, removes BCV switcher from CalculatorCard, and places theme + PWA controls in Footer/BaseLayout", () => {
+  it("hides header on home, removes BCV switcher from CalculatorCard, and keeps desktop-only Navbar theme toggle plus Footer controls", () => {
     const homeAstro = fs.readFileSync(path.join(PAGES_DIR, "index.astro"), "utf-8");
     expect(homeAstro).toMatch(/hideHeader=\{true\}/);
     expect(homeAstro).toContain("min-height: 100dvh");
+    expect(homeAstro).toContain("fetchRatesHistory");
+    expect(homeAstro).toContain('variant="home"');
+    expect(homeAstro).toContain("scroll-cue");
 
     const calcAstro = fs.readFileSync(
       path.join(COMPONENTS_DIR, "CalculatorCard.astro"),
@@ -174,9 +187,18 @@ describe("routes, endpoints, and SEO/MWG structural contracts", () => {
     );
     expect(calcAstro).not.toContain("data-bcv-toggle-wrap");
     expect(calcAstro).not.toContain("data-bcv-mode");
+    expect(calcAstro).toContain("data-swap-btn");
+    expect(calcAstro).toContain("data-inputs-stack");
 
     const navbarAstro = fs.readFileSync(path.join(COMPONENTS_DIR, "Navbar.astro"), "utf-8");
-    expect(navbarAstro).not.toContain("data-theme-toggle");
+    expect(navbarAstro).toContain("navbar-theme-switch");
+    expect(navbarAstro).toContain("data-theme-toggle");
+    expect(navbarAstro).toMatch(
+      /\.navbar-theme-switch\s*\{[^}]*display:\s*none/,
+    );
+    expect(navbarAstro).toMatch(
+      /@media\s*\(min-width:\s*54rem\)[\s\S]*\.navbar-theme-switch\s*\{[^}]*display:\s*inline-flex/,
+    );
 
     const footerAstro = fs.readFileSync(path.join(COMPONENTS_DIR, "Footer.astro"), "utf-8");
     expect(footerAstro).toContain("data-theme-toggle");
@@ -192,6 +214,12 @@ describe("routes, endpoints, and SEO/MWG structural contracts", () => {
 
     const dolarAstro = fs.readFileSync(path.join(PAGES_DIR, "dolar-bcv.astro"), "utf-8");
     expect(dolarAstro).not.toContain("directo en la calculadora superior");
+
+    const brechaPage = fs.readFileSync(
+      path.join(PAGES_DIR, "brecha-cambiaria.astro"),
+      "utf-8",
+    );
+    expect(brechaPage).toContain("showBrechaUsd={true}");
   });
 
   it("places a desktop-only floating theme toggle in Home corner, displays brecha in $, and keeps instant full-height copy button", () => {
@@ -263,5 +291,208 @@ describe("routes, endpoints, and SEO/MWG structural contracts", () => {
       "utf-8",
     );
     expect(globalCss).toContain("overflow-wrap: anywhere");
+  });
+
+  it("uses white CheckCircle with green check, hides mobile hamburger >= 54rem without freeze, and defaults calculator order Foreign -> Bolívares", () => {
+    const checkCircleAstro = fs.readFileSync(
+      path.join(COMPONENTS_DIR, "icons", "CheckCircle.astro"),
+      "utf-8",
+    );
+    expect(checkCircleAstro).toContain('fill="#ffffff"');
+    expect(checkCircleAstro).toContain('stroke="var(--cr-primary, #16a249)"');
+
+    const calcClient = fs.readFileSync(
+      path.join(SRC_DIR, "scripts", "calculator-client.ts"),
+      "utf-8",
+    );
+    expect(calcClient).toContain('fill="#ffffff"');
+    expect(calcClient).toContain('stroke="var(--cr-primary, #16a249)"');
+
+    const navbarAstro = fs.readFileSync(path.join(COMPONENTS_DIR, "Navbar.astro"), "utf-8");
+    const media54Idx = navbarAstro.indexOf("@media (min-width: 54rem)");
+    const baseMobileBtnIdx = navbarAstro.indexOf(".mobile-menu-btn {");
+    expect(media54Idx).toBeGreaterThan(-1);
+    expect(baseMobileBtnIdx).toBeGreaterThan(-1);
+    expect(baseMobileBtnIdx).toBeLessThan(media54Idx);
+    expect(navbarAstro).toMatch(
+      /@media\s*\(min-width:\s*54rem\)[\s\S]*\.mobile-menu-btn\s*\{[^}]*display:\s*none/,
+    );
+    expect(navbarAstro).toContain('closedby="any"');
+    expect(navbarAstro).toContain("autofocus");
+    expect(navbarAstro).toContain("mobile-drawer-theme-switch");
+
+    const calcAstro = fs.readFileSync(
+      path.join(COMPONENTS_DIR, "CalculatorCard.astro"),
+      "utf-8",
+    );
+    const foreignFieldIdx = calcAstro.indexOf('data-field-role="foreign"');
+    const bsFieldIdx = calcAstro.indexOf('data-field-role="bs"');
+    expect(foreignFieldIdx).toBeGreaterThan(-1);
+    expect(bsFieldIdx).toBeGreaterThan(-1);
+    expect(foreignFieldIdx).toBeLessThan(bsFieldIdx);
+    expect(calcAstro).toMatch(
+      /\.currency-field\[data-field-role="foreign"\]\s*\{[^}]*order:\s*1/,
+    );
+    expect(calcAstro).toMatch(
+      /\.currency-field\[data-field-role="bs"\]\s*\{[^}]*order:\s*3/,
+    );
+    expect(calcAstro).toContain('data-offline-banner hidden');
+  });
+
+  it("provides interactive chart column hover elements and HeroUI DataGrid trays with neutral highlights", () => {
+    const historyPanel = fs.readFileSync(
+      path.join(COMPONENTS_DIR, "RateHistoryPanel.astro"),
+      "utf-8",
+    );
+    expect(historyPanel).toContain("data-chart-wrapper");
+    expect(historyPanel).toContain("data-chart-hover-band");
+    expect(historyPanel).toContain("data-chart-crosshair");
+    expect(historyPanel).toContain("data-chart-columns");
+    expect(historyPanel).toContain("data-chart-tooltip");
+    expect(historyPanel).not.toContain("<circle");
+
+    const eqTable = fs.readFileSync(
+      path.join(COMPONENTS_DIR, "EquivalenceTable.astro"),
+      "utf-8",
+    );
+    expect(eqTable).toContain('class="table-tray"');
+    expect(eqTable).toContain("filter: drop-shadow");
+    expect(eqTable).not.toContain("max-block-size:");
+    expect(eqTable).not.toMatch(/\.is-featured-row\s*\.amount-value\s*\{[^}]*var\(--cr-primary-ink\)/);
+    expect(eqTable).toContain("amount-sub");
+    expect(eqTable).not.toContain("nth-child(even)");
+    expect(eqTable).not.toContain("--cr-row-alt");
+    expect(eqTable).not.toContain("--cr-row-highlight");
+    expect(eqTable).toMatch(/tbody\s*\{[^}]*background:\s*transparent/);
+    expect(eqTable).toMatch(/tbody tr\s*\{[^}]*background:\s*transparent/);
+    expect(eqTable).toMatch(
+      /tbody th,\s*\r?\n\s*tbody td\s*\{[^}]*background-color:\s*var\(--cr-card-inner\)[^}]*border-bottom:\s*1px solid var\(--cr-table-divider\)/,
+    );
+    expect(eqTable).toContain("border-start-start-radius: 1rem;");
+    expect(eqTable).toContain("border-end-end-radius: 1rem;");
+
+    const tendenciasAstro = fs.readFileSync(
+      path.join(PAGES_DIR, "tendencias.astro"),
+      "utf-8",
+    );
+    expect(tendenciasAstro).toContain('class="table-tray"');
+    expect(tendenciasAstro).toContain("table-tray-footer");
+    expect(tendenciasAstro).toContain("formatShortCaracasMonthDay");
+    expect(tendenciasAstro).toContain("buildContinuousDailyTimeline");
+    expect(tendenciasAstro).toContain("const isTodayRow = row.date === todayCaracasKey");
+    expect(tendenciasAstro).not.toMatch(/<time[^>]*title=/);
+    expect(tendenciasAstro).toContain("filter: drop-shadow");
+    expect(tendenciasAstro).not.toContain("max-block-size:");
+    expect(tendenciasAstro).not.toContain("nth-child(even)");
+    expect(tendenciasAstro).not.toContain("--cr-row-alt");
+    expect(tendenciasAstro).not.toContain("--cr-row-highlight");
+    expect(tendenciasAstro).toMatch(/tbody\s*\{[^}]*background:\s*transparent/);
+    expect(tendenciasAstro).toMatch(/tbody tr\s*\{[^}]*background:\s*transparent/);
+    expect(tendenciasAstro).toMatch(
+      /tbody th,\s*\r?\n\s*tbody td\s*\{[^}]*background-color:\s*var\(--cr-card-inner\)[^}]*border-bottom:\s*1px solid var\(--cr-table-divider\)/,
+    );
+    expect(tendenciasAstro).toContain("border-start-start-radius: 1rem;");
+    expect(tendenciasAstro).toContain("border-end-end-radius: 1rem;");
+  });
+
+  it("uses semantic live <time> elements with natural Caracas date formatting across calculator, subpages, and detail history", () => {
+    const layoutAstro = fs.readFileSync(
+      path.join(SRC_DIR, "layouts", "BaseLayout.astro"),
+      "utf-8",
+    );
+    expect(layoutAstro).toContain("initLiveTimestamps");
+
+    const liveTargets = [
+      path.join(COMPONENTS_DIR, "CalculatorCard.astro"),
+      path.join(COMPONENTS_DIR, "RateHistoryPanel.astro"),
+      path.join(PAGES_DIR, "dolar-bcv.astro"),
+      path.join(PAGES_DIR, "euro-bcv.astro"),
+      path.join(PAGES_DIR, "usdt-binance.astro"),
+      path.join(PAGES_DIR, "brecha-cambiaria.astro"),
+    ];
+
+    for (const filePath of liveTargets) {
+      const content = fs.readFileSync(filePath, "utf-8");
+      expect(content, `${path.basename(filePath)} missing data-live-time`).toContain(
+        "data-live-time",
+      );
+      expect(content, `${path.basename(filePath)} missing <time>`).toContain("<time");
+      expect(
+        content,
+        `${path.basename(filePath)} still uses formatCaracasTimestamp`,
+      ).not.toContain("formatCaracasTimestamp");
+    }
+
+    const dolarAstro = fs.readFileSync(path.join(PAGES_DIR, "dolar-bcv.astro"), "utf-8");
+    expect(dolarAstro).toContain('data-live-future="true"');
+
+    const euroAstro = fs.readFileSync(path.join(PAGES_DIR, "euro-bcv.astro"), "utf-8");
+    expect(euroAstro).toContain('data-live-future="true"');
+
+    const calcClient = fs.readFileSync(
+      path.join(SRC_DIR, "scripts", "calculator-client.ts"),
+      "utf-8",
+    );
+    expect(calcClient).toContain("syncLiveTimeElement");
+    expect(calcClient).not.toContain("formatCaracasTimestamp");
+  });
+
+  it("renders valid dynamic PNG OG images for supported routes, returns 404 on invalid routes, and configures vercel.json SEO/security headers", async () => {
+    const ogMod = await import("@/pages/og/[route].png");
+
+    for (const route of ["home", "dolar-bcv", "brecha-cambiaria", "tendencias"]) {
+      const res = await ogMod.GET({ params: { route } } as never);
+      expect(res.status, `Expected 200 PNG for ${route}`).toBe(200);
+      expect(res.headers.get("Content-Type")).toBe("image/png");
+      expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
+      const bytes = new Uint8Array(await res.arrayBuffer());
+      expect(bytes.byteLength).toBeGreaterThan(5000);
+      expect(Array.from(bytes.slice(0, 4))).toEqual([0x89, 0x50, 0x4e, 0x47]);
+    }
+
+    const notFoundRes = await ogMod.GET({ params: { route: "invalid-route" } } as never);
+    expect(notFoundRes.status).toBe(404);
+    expect(notFoundRes.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+
+    const notFoundAstro = fs.readFileSync(path.join(PAGES_DIR, "404.astro"), "utf-8");
+    expect(notFoundAstro).toContain('buildPageMeta("not-found")');
+
+    const vercelConfig = JSON.parse(
+      fs.readFileSync(path.join(WEB_ROOT, "vercel.json"), "utf-8"),
+    ) as {
+      headers: Array<{ source: string; headers: Array<{ key: string; value: string }> }>;
+    };
+    const rootRule = vercelConfig.headers.find((h) => h.source === "/(.*)");
+    const apiRule = vercelConfig.headers.find((h) => h.source === "/api/(.*)");
+    const notFoundRule = vercelConfig.headers.find((h) => h.source === "/404");
+
+    expect(rootRule?.headers).toContainEqual({
+      key: "X-Content-Type-Options",
+      value: "nosniff",
+    });
+    expect(rootRule?.headers).toContainEqual({
+      key: "Referrer-Policy",
+      value: "strict-origin-when-cross-origin",
+    });
+    expect(rootRule?.headers).toContainEqual({
+      key: "X-Frame-Options",
+      value: "DENY",
+    });
+    expect(rootRule?.headers).toContainEqual({
+      key: "Cross-Origin-Opener-Policy",
+      value: "same-origin-allow-popups",
+    });
+    expect(apiRule?.headers).toContainEqual({
+      key: "X-Robots-Tag",
+      value: "noindex, nofollow",
+    });
+    expect(notFoundRule?.headers).toContainEqual({
+      key: "X-Robots-Tag",
+      value: "noindex, nofollow",
+    });
+
+    const privacidadAstro = fs.readFileSync(path.join(PAGES_DIR, "privacidad.astro"), "utf-8");
+    expect(privacidadAstro).not.toContain("mailto:");
+    expect(privacidadAstro).not.toContain("info@cambiorapido.app");
   });
 });

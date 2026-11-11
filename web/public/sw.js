@@ -1,12 +1,13 @@
-const SHELL_CACHE = "cr-shell-v1";
-const STATIC_CACHE = "cr-static-v1";
-const API_CACHE = "cr-api-v1";
+const SHELL_CACHE = "cr-shell-v2";
+const STATIC_CACHE = "cr-static-v2";
+const API_CACHE = "cr-api-v2";
 const ACTIVE_CACHES = new Set([SHELL_CACHE, STATIC_CACHE, API_CACHE]);
 const MAX_STATIC_ENTRIES = 60;
 
 const PRECACHE_URLS = [
   "/",
   "/manifest.json",
+  "/favicon.svg",
   "/icon-192.png",
   "/icon-512.png",
   "/favicon.ico",
@@ -115,7 +116,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
   if (isDevAssetRequest(url)) return;
-  if (url.pathname === "/sw.js") return;
+  if (url.pathname === "/sw.js" || url.pathname.startsWith("/og/")) return;
 
   if (request.mode === "navigate") {
     event.respondWith(networkFirst(request, SHELL_CACHE, "/"));

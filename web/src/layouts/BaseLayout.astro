@@ -1,10 +1,15 @@
 ---
 import "@fontsource/poppins/400.css";
+import "@fontsource/poppins/500.css";
 import "@fontsource/poppins/600.css";
 import "@fontsource/poppins/700.css";
+import "@fontsource/poppins/800.css";
+import poppins400Url from "@fontsource/poppins/files/poppins-latin-400-normal.woff2?url";
+import poppins700Url from "@fontsource/poppins/files/poppins-latin-700-normal.woff2?url";
+import poppins800Url from "@fontsource/poppins/files/poppins-latin-800-normal.woff2?url";
 import "@/styles/global.css";
 import type { PageMeta } from "@/lib/seo/meta";
-import { SITE_NAME } from "@/lib/seo/config";
+import { getGoogleSiteVerification, SITE_NAME } from "@/lib/seo/config";
 import Navbar from "@/components/Navbar.astro";
 import Footer from "@/components/Footer.astro";
 
@@ -15,6 +20,11 @@ interface Props {
 }
 
 const { meta, schemas = [], hideHeader = false } = Astro.props;
+const googleVerification = getGoogleSiteVerification();
+
+if (!Astro.isPrerendered && meta.robots.includes("noindex")) {
+  Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow");
+}
 ---
 
 <!doctype html>
@@ -33,11 +43,21 @@ const { meta, schemas = [], hideHeader = false } = Astro.props;
       } catch (_err) {}
     </script>
 
+    <link rel="preload" href={poppins400Url} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={poppins700Url} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={poppins800Url} as="font" type="font/woff2" crossorigin />
+
     <title>{meta.title}</title>
     <meta name="description" content={meta.description} />
     <meta name="robots" content={meta.robots} />
+    {
+      googleVerification && (
+        <meta name="google-site-verification" content={googleVerification} />
+      )
+    }
     <link rel="canonical" href={meta.canonical} />
     <link rel="alternate" hreflang="es-VE" href={meta.canonical} />
+    <link rel="alternate" hreflang="x-default" href={meta.canonical} />
 
     <!-- Open Graph -->
     <meta property="og:locale" content="es_VE" />
@@ -47,17 +67,21 @@ const { meta, schemas = [], hideHeader = false } = Astro.props;
     <meta property="og:description" content={meta.ogDescription} />
     <meta property="og:url" content={meta.canonical} />
     <meta property="og:image" content={meta.ogImage} />
+    <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={meta.ogImageAlt} />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={meta.ogTitle} />
     <meta name="twitter:description" content={meta.ogDescription} />
     <meta name="twitter:image" content={meta.ogImage} />
+    <meta name="twitter:image:alt" content={meta.ogImageAlt} />
 
     <!-- PWA & Icons -->
     <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <meta name="theme-color" content="#16a249" />
@@ -67,7 +91,11 @@ const { meta, schemas = [], hideHeader = false } = Astro.props;
 
     {
       schemas.map((schema) => (
-        <script is:inline type="application/ld+json" set:html={JSON.stringify(schema)} />
+        <script
+          is:inline
+          type="application/ld+json"
+          set:html={JSON.stringify(schema).replace(/</g, "\\u003c")}
+        />
       ))
     }
   </head>
@@ -92,10 +120,12 @@ const { meta, schemas = [], hideHeader = false } = Astro.props;
     ></div>
 
     <script>
+      import { initLiveTimestamps } from "@/scripts/live-time";
       import { initPwa } from "@/scripts/pwa";
       import { initThemeToggle } from "@/scripts/theme";
       initThemeToggle();
       initPwa();
+      initLiveTimestamps();
     </script>
   </body>
 </html>

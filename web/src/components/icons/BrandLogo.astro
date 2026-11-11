@@ -1,0 +1,77 @@
+---
+interface Props {
+  boxed?: boolean;
+  size?: "sm" | "md" | "lg";
+  class?: string;
+}
+
+const { boxed = false, size = "md", class: className = "" } = Astro.props;
+
+const boxPx = size === "sm" ? 24 : size === "lg" ? 46 : 36;
+const flatPx = size === "sm" ? 18 : size === "lg" ? 28 : 22;
+---
+
+{
+  boxed ? (
+    <svg
+      width={boxPx}
+      height={boxPx}
+      viewBox="0 0 44 44"
+      fill="none"
+      aria-hidden="true"
+      class:list={["cr-brand-logo-boxed", `is-${size}`, className]}
+    >
+      <rect width="44" height="44" rx="12" fill="var(--cr-primary, #16a249)" />
+      <g
+        transform="translate(8.8 8.8) scale(1.1)"
+        stroke="#095625"
+        stroke-width="2.75"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+        <polyline points="16 7 22 7 22 13" />
+      </g>
+    </svg>
+  ) : (
+    <svg
+      width={flatPx}
+      height={flatPx}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.75"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+      class:list={["cr-brand-svg", className]}
+    >
+      <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+      <polyline points="16 7 22 7 22 13" />
+    </svg>
+  )
+}
+
+<style>
+  .cr-brand-logo-boxed {
+    display: block;
+    flex-shrink: 0;
+  }
+
+  .cr-brand-svg {
+    color: var(--cr-primary);
+    flex-shrink: 0;
+  }
+
+  @media (forced-colors: active) {
+    .cr-brand-logo-boxed rect {
+      fill: Highlight;
+      stroke: CanvasText;
+      stroke-width: 1.5;
+    }
+
+    .cr-brand-logo-boxed g {
+      stroke: HighlightText;
+    }
+  }
+</style>

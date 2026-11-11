@@ -1,18 +1,23 @@
 ---
 import type { FaqItem } from "@/lib/seo/faqs";
+import ChevronDown from "./icons/ChevronDown.astro";
 
 interface Props {
   title?: string;
+  subtitle?: string;
   faqs: FaqItem[];
   groupByCategory?: boolean;
   showMoreLink?: boolean;
+  defaultOpenFirst?: boolean;
 }
 
 const {
   title = "Preguntas frecuentes",
+  subtitle,
   faqs = [],
   groupByCategory = false,
   showMoreLink = true,
+  defaultOpenFirst = true,
 } = Astro.props;
 
 const groups = groupByCategory
@@ -32,9 +37,12 @@ const groups = groupByCategory
   faqs.length > 0 && (
     <section class="faq-section" aria-labelledby="faq-section-heading">
       <div class="faq-header">
-        <h2 id="faq-section-heading" class="faq-heading">
-          {title}
-        </h2>
+        <div class="faq-header-copy">
+          <h2 id="faq-section-heading" class="faq-heading">
+            {title}
+          </h2>
+          {subtitle && <p class="faq-sub">{subtitle}</p>}
+        </div>
         {showMoreLink && (
           <a href="/preguntas-frecuentes" class="faq-all-link">
             Ver todas →
@@ -43,16 +51,21 @@ const groups = groupByCategory
       </div>
 
       <div class="faq-groups">
-        {groups.map(([groupName, groupFaqs]) => (
+        {groups.map(([groupName, groupFaqs], groupIdx) => (
           <div class="faq-group">
             {groupByCategory && <h3 class="faq-category">{groupName}</h3>}
 
             <div class="faq-list">
-              {groupFaqs.map((item) => (
-                <details class="faq-item">
+              {groupFaqs.map((item, itemIdx) => (
+                <details
+                  class="faq-item"
+                  open={defaultOpenFirst && groupIdx === 0 && itemIdx === 0}
+                >
                   <summary class="faq-summary">
                     <span class="faq-question">{item.question}</span>
-                    <span class="faq-icon" aria-hidden="true">+</span>
+                    <span class="faq-icon" aria-hidden="true">
+                      <ChevronDown size={18} />
+                    </span>
                   </summary>
                   <div class="faq-answer">
                     <p>{item.answer}</p>
@@ -83,21 +96,37 @@ const groups = groupByCategory
     gap: 0.25rem 0.75rem;
   }
 
+  .faq-header-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
   .faq-heading {
     margin: 0;
+    font-family: var(--font-headline);
     font-size: clamp(1.125rem, 3vw, 1.25rem);
     font-weight: 700;
+    letter-spacing: -0.02em;
     color: var(--cr-text);
     text-wrap: balance;
+  }
+
+  .faq-sub {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.55;
+    color: var(--cr-text-secondary);
+    text-wrap: pretty;
   }
 
   .faq-all-link {
     display: inline-flex;
     align-items: center;
     min-block-size: 36px;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--cr-primary);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--cr-primary-ink);
     text-decoration: none;
     white-space: nowrap;
   }
@@ -115,27 +144,36 @@ const groups = groupByCategory
   .faq-groups {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 1.75rem;
   }
 
   .faq-category {
     margin: 0 0 0.75rem;
-    font-size: 1rem;
+    padding-inline: 0.25rem;
+    font-size: 0.75rem;
     font-weight: 700;
-    color: var(--cr-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--cr-text-muted);
   }
 
   .faq-list {
     display: flex;
     flex-direction: column;
-    gap: 0.625rem;
+    gap: 0.75rem;
   }
 
   .faq-item {
-    border: 1px solid var(--cr-border);
-    border-radius: 10px;
-    background-color: var(--cr-bg-secondary);
+    border: 0;
+    border-radius: 0.875rem;
+    background-color: var(--cr-surface);
+    box-shadow: var(--cr-shadow);
     overflow: hidden;
+    transition: background-color 150ms ease;
+  }
+
+  .faq-item:hover {
+    background-color: var(--cr-surface-hover);
   }
 
   .faq-summary {
@@ -143,13 +181,15 @@ const groups = groupByCategory
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.875rem;
+    gap: 1rem;
     min-block-size: 44px;
-    padding: 0.875rem clamp(0.875rem, 3vw, 1.125rem);
+    padding: 1rem clamp(1rem, 3.5vw, 1.25rem);
     cursor: pointer;
-    font-weight: 600;
+    font-family: var(--font-headline);
+    font-weight: 700;
     font-size: 0.9375rem;
     color: var(--cr-text);
+    user-select: none;
   }
 
   .faq-summary::-webkit-details-marker {
@@ -167,26 +207,45 @@ const groups = groupByCategory
   }
 
   .faq-icon {
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: var(--cr-primary);
-    transition: transform 150ms ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--cr-text-muted);
     flex-shrink: 0;
   }
 
+  @media (prefers-reduced-motion: no-preference) {
+    .faq-icon {
+      transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1), color 150ms ease;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .faq-item {
+      transition: none;
+    }
+  }
+
   .faq-item[open] .faq-icon {
-    transform: rotate(45deg);
+    transform: rotate(180deg);
+    color: var(--cr-text);
   }
 
   .faq-answer {
-    padding: 0 clamp(0.875rem, 3vw, 1.125rem) 1rem;
+    padding: 0 clamp(1rem, 3.5vw, 1.25rem) 1.125rem;
     color: var(--cr-text-secondary);
-    font-size: 0.9375rem;
-    line-height: 1.6;
+    font-size: 0.875rem;
+    line-height: 1.65;
   }
 
   .faq-answer p {
     margin: 0;
     text-wrap: pretty;
+  }
+
+  @media (forced-colors: active) {
+    .faq-item {
+      border: 1px solid ButtonBorder;
+    }
   }
 </style>

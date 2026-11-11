@@ -1,4 +1,4 @@
-import { buildCanonicalUrl, getSiteUrl, PUBLIC_ROUTES } from "./config";
+import { buildCanonicalUrl, getSiteUrl, isIndexableDeployment, PUBLIC_ROUTES } from "./config";
 
 function escapeXml(value: string): string {
   return value
@@ -9,8 +9,18 @@ function escapeXml(value: string): string {
     .replaceAll("'", "&apos;");
 }
 
-export function buildRobotsTxt(siteUrl?: string): string {
+export function buildRobotsTxt(siteUrl?: string, indexable?: boolean): string {
   const base = getSiteUrl(siteUrl);
+  const canIndex = indexable ?? isIndexableDeployment({ siteUrl: base });
+
+  if (!canIndex) {
+    return [
+      "User-agent: *",
+      "Disallow: /",
+      "",
+    ].join("\n");
+  }
+
   return [
     "User-agent: *",
     "Allow: /",

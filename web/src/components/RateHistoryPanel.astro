@@ -1,8 +1,23 @@
 ---
-import { formatSimpleCaracasDate } from "@/lib/rates/caracas-date";
-import { formatCurrency } from "@/lib/rates/format";
+import {
+  formatNaturalCaracasDateTime,
+  toCaracasIsoString,
+} from "@/lib/rates/caracas-date";
+import { formatCurrency, formatNumber } from "@/lib/rates/format";
 import type { HistorySeries, ResolvedRate } from "@/lib/rates/types";
-import { buildChartSeriesModel } from "@/scripts/calculator-state";
+import { buildChartSeriesModel, getSourceChartColor } from "@/scripts/calculator-state";
+import {
+  buildChartHoverColumns,
+  buildDateAxisLabels,
+  buildSmoothPaths,
+  formatRateChipLabel,
+  formatTodayBadgeText,
+  formatVariationPill,
+  getVariationToneClass,
+  type HistoryPanelVariant,
+} from "@/scripts/history-client";
+import ChevronDown from "./icons/ChevronDown.astro";
+import NorthEast from "./icons/NorthEast.astro";
 
 interface Props {
   id?: string;
@@ -13,6 +28,7 @@ interface Props {
   initialHistory?: HistorySeries;
   autoInit?: boolean;
   showFullPageLink?: boolean;
+  variant?: HistoryPanelVariant;
 }
 
 const {
@@ -24,10 +40,21 @@ const {
   initialHistory = {},
   autoInit = true,
   showFullPageLink = false,
+  variant,
 } = Astro.props;
 
-const activeSources =
+const rawSources =
   defaultSources.length > 0 ? defaultSources : [initialCurrencyId];
+
+const resolvedVariant: HistoryPanelVariant =
+  variant ??
+  (!autoInit || (rawSources.length > 1 && !showFullPageLink)
+    ? "compare"
+    : "currency");
+
+const isHomeVariant = resolvedVariant === "home";
+const isCurrencyVariant = resolvedVariant === "currency";
+const activeSources = isHomeVariant ? [rawSources[0]] : rawSources;
 
 const ssrModel = buildChartSeriesModel({
   selectedSources: activeSources,
@@ -35,6 +62,11 @@ const ssrModel = buildChartSeriesModel({
   historyByCurrency: initialHistory,
   days: defaultDays,
 });
+
+const ssrSmoothSeries = ssrModel.series.map((s) => ({
+  ...s,
+  ...buildSmoothPaths(s.points, s.linePath, s.fillPath),
+}));
 
 const isSingleMode = activeSources.length === 1;
 const singleSeries = ssrModel.series[0] ?? null;
@@ -47,72 +79,173 @@ const modeTitle =
       : "Comparar";
 
 const rawSinglePoints =
-  isSingleMode && singleSeries
-    ? (initialHistory[singleSeries.id] ?? []).slice(-defaultDays).reverse()
-    : [];
+  isSingleMode && singleSeries ? [...singleSeries.points].reverse() : [];
+
+const filterableRates =
+  isCurrencyVariant && activeSources.length > 0
+    ? rates.filter((r) => activeSources.includes(r.currencyId))
+    : rates;
+
+const showSourceFilters =
+  !isHomeVariant &&
+  (resolvedVariant === "compare" || filterableRates.length > 1);
+
+const ssrDateLabels = buildDateAxisLabels(ssrModel.series, undefined, ssrModel.timeline);
+const ssrHoverColumns = buildChartHoverColumns(ssrModel);
+const ssrLastColIdx = Math.max(0, ssrHoverColumns.length - 1);
+const primaryRateFallback = rates.find((r) => r.currencyId === activeSources[0]);
+const initialLatestRateText = singleSeries
+  ? formatCurrency(singleSeries.latestRate, "Bs")
+  : primaryRateFallback
+    ? formatCurrency(primaryRateFallback.effectiveRate, "Bs")
+    : "—";
 ---
 
 <section
   id={id}
-  class="history-panel"
+  class:list={["history-panel", `is-${resolvedVariant}`]}
   data-history-panel
+  data-variant={resolvedVariant}
   data-auto-init={autoInit ? "true" : "false"}
   data-initial-currency-id={String(initialCurrencyId)}
   data-default-days={String(defaultDays)}
   data-default-sources={activeSources.join(",")}
+  data-scoped-sources={isCurrencyVariant ? activeSources.join(",") : ""}
   data-rates-json={JSON.stringify(rates)}
   data-initial-history-json={JSON.stringify(initialHistory)}
 >
-  <div class="history-header">
-    <h3 class="history-title" data-history-mode-title>{modeTitle}</h3>
+  {
+    isHomeVariant ? (
+      <div class="home-header">
+        <div
+          class="home-tabs"
+          role="tablist"
+          aria-label="Seleccionar moneda para ver tendencia"
+          hidden={rates.length === 0}
+        >
+          {rates.map((r) => {
+            const isSelected = r.currencyId === activeSources[0];
+            return (
+              <button
+                type="button"
+                role="tab"
+                data-home-tab-id={String(r.currencyId)}
+                aria-selected={isSelected ? "true" : "false"}
+                tabindex={isSelected ? 0 : -1}
+                class:list={["home-tab", { "is-active": isSelected }]}
+              >
+                {formatRateChipLabel(r)}
+              </button>
+            );
+          })}
+        </div>
 
-    <div class="range-tabs" role="group" aria-label="Rango de días">
-      {
-        ([7, 15, 30] as const).map((r) => {
-          const isSelected = r === defaultDays;
-          return (
-            <button
-              type="button"
-              data-range-days={String(r)}
-              aria-pressed={isSelected ? "true" : "false"}
-              class:list={["range-tab", { "is-active": isSelected }]}
+        <div class="home-stats">
+          <div class="home-stats-values">
+            <strong class="latest-rate" data-latest-rate>
+              {initialLatestRateText}
+            </strong>
+            <span
+              class:list={[
+                "variation-pill",
+                singleSeries
+                  ? getVariationToneClass(singleSeries.changePercent)
+                  : "is-flat",
+              ]}
+              data-variation-pill
+              hidden={!singleSeries}
             >
-              {r}D
-            </button>
-          );
-        })
-      }
-    </div>
-  </div>
-
-  <div class="source-filters" data-source-filters>
-    {
-      rates.map((r) => {
-        const selected = activeSources.includes(r.currencyId);
-        const shortName = r.currencyName.replace("Dólar ", "");
-        const dotColor =
-          r.currencyId === 1
-            ? "#16a249"
-            : r.currencyId === 2
-              ? "#0d9488"
-              : r.currencyId === 3
-                ? "#ea4335"
-                : "#2563eb";
-        return (
-          <button
-            type="button"
-            data-filter-id={String(r.currencyId)}
-            aria-pressed={selected ? "true" : "false"}
-            class:list={["source-chip", { "is-selected": selected }]}
-            style={`--chip-color: ${dotColor}`}
+              {singleSeries
+                ? formatVariationPill(singleSeries.changePercent, defaultDays)
+                : ""}
+            </span>
+          </div>
+          <a
+            href="/tendencias"
+            class="expand-chart-btn"
+            aria-label="Ver tendencias completas"
+            title="Ver tendencias completas"
           >
-            <span class="chip-dot" aria-hidden="true"></span>
-            <span>{shortName}</span>
-          </button>
-        );
-      })
-    }
-  </div>
+            <NorthEast size={16} />
+          </a>
+        </div>
+      </div>
+    ) : (
+      <div class="panel-top">
+        <div class="history-header">
+          <div class="panel-title-group">
+            <h3 class="history-title" data-history-mode-title>
+              {modeTitle}
+            </h3>
+            <div
+              class="inline-stats"
+              data-inline-stats
+              hidden={!(isSingleMode && singleSeries)}
+            >
+              <strong class="latest-rate is-compact" data-latest-rate>
+                {initialLatestRateText}
+              </strong>
+              <span
+                class:list={[
+                  "variation-pill",
+                  singleSeries
+                    ? getVariationToneClass(singleSeries.changePercent)
+                    : "is-flat",
+                ]}
+                data-variation-pill
+                hidden={!singleSeries}
+              >
+                {singleSeries
+                  ? formatVariationPill(singleSeries.changePercent, defaultDays)
+                  : ""}
+              </span>
+            </div>
+          </div>
+
+          <div class="range-tabs" role="group" aria-label="Rango de días">
+            {([7, 15, 30] as const).map((r) => {
+              const isSelected = r === defaultDays;
+              return (
+                <button
+                  type="button"
+                  data-range-days={String(r)}
+                  aria-pressed={isSelected ? "true" : "false"}
+                  class:list={["range-tab", { "is-active": isSelected }]}
+                >
+                  {r}D
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {showSourceFilters && (
+          <div
+            class="source-filters"
+            data-source-filters
+            hidden={filterableRates.length === 0 || (isCurrencyVariant && filterableRates.length <= 1)}
+          >
+            {filterableRates.map((r) => {
+              const selected = activeSources.includes(r.currencyId);
+              const dotColor = getSourceChartColor(r.currencyId, r.currencyName);
+              return (
+                <button
+                  type="button"
+                  data-filter-id={String(r.currencyId)}
+                  aria-pressed={selected ? "true" : "false"}
+                  class:list={["source-chip", { "is-selected": selected }]}
+                  style={`--chip-color: ${dotColor}`}
+                >
+                  <span class="chip-dot" aria-hidden="true" />
+                  <span>{formatRateChipLabel(r)}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   <div class="history-state-box" data-history-loading hidden>
     <span class="spinner" aria-hidden="true"></span>
@@ -124,44 +257,67 @@ const rawSinglePoints =
   </div>
 
   <div data-history-content hidden={!hasData}>
-    <div
-      class="metrics-grid"
-      data-single-metrics
-      hidden={!(isSingleMode && singleSeries)}
-    >
-      <div class="metric-block">
-        <span class="metric-label">Mínimo</span>
-        <span class="metric-value" data-metric-min>
-          {hasData ? formatCurrency(ssrModel.globalMin, "Bs") : "—"}
-        </span>
-      </div>
-      <div class="metric-block">
-        <span class="metric-label">Máximo</span>
-        <span class="metric-value" data-metric-max>
-          {hasData ? formatCurrency(ssrModel.globalMax, "Bs") : "—"}
-        </span>
-      </div>
-      <div class="metric-block is-end">
-        <span class="metric-label">Variación</span>
-        <span
-          class="metric-value metric-change"
-          data-metric-change
-          style={
-            singleSeries
-              ? `color: ${singleSeries.isPositive ? "#16a249" : "#ea4335"}`
-              : undefined
-          }
+    {
+      !isHomeVariant && (
+        <div
+          class="metrics-grid"
+          data-single-metrics
+          hidden={!(isSingleMode && singleSeries)}
         >
-          {
-            singleSeries
-              ? `${singleSeries.isPositive ? "▲" : "▼"} ${singleSeries.changePercent.toFixed(2)}%`
-              : "—"
-          }
+          <div class="metric-block">
+            <span class="metric-label">Mínimo</span>
+            <span class="metric-value" data-metric-min>
+              {hasData ? formatCurrency(ssrModel.globalMin, "Bs") : "—"}
+            </span>
+          </div>
+          <div class="metric-block">
+            <span class="metric-label">Máximo</span>
+            <span class="metric-value" data-metric-max>
+              {hasData ? formatCurrency(ssrModel.globalMax, "Bs") : "—"}
+            </span>
+          </div>
+          <div class="metric-block is-end">
+            <span class="metric-label">Variación</span>
+            <span
+              class:list={[
+                "metric-value metric-change",
+                singleSeries
+                  ? singleSeries.isPositive
+                    ? "is-positive"
+                    : "is-negative"
+                  : undefined,
+              ]}
+              data-metric-change
+            >
+              {singleSeries
+                ? `${singleSeries.isPositive ? "▲" : "▼"} ${formatNumber(Math.abs(singleSeries.changePercent), { precision: 2 })}%`
+                : "—"}
+            </span>
+          </div>
+        </div>
+      )
+    }
+
+    <div class="chart-wrapper" data-chart-wrapper>
+      <div class="chart-hover-band" data-chart-hover-band hidden aria-hidden="true"></div>
+      <div class="chart-crosshair" data-chart-crosshair hidden aria-hidden="true"></div>
+
+      <div
+        class="today-badge"
+        data-today-badge
+        hidden={!(isSingleMode && singleSeries)}
+      >
+        <span
+          class="today-badge-dot"
+          data-today-dot
+          style={singleSeries ? `background-color: ${singleSeries.color}` : undefined}
+          aria-hidden="true"
+        ></span>
+        <span class="today-badge-text" data-today-text>
+          {singleSeries ? formatTodayBadgeText(singleSeries) : ""}
         </span>
       </div>
-    </div>
 
-    <div class="chart-wrapper">
       <svg
         data-chart-svg
         class="chart-svg"
@@ -177,14 +333,48 @@ const rawSinglePoints =
           {
             ssrModel.series.map((s) => (
               <linearGradient id={`${id}-grad-${s.id}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color={s.color} stop-opacity="0.20" />
+                <stop
+                  offset="0%"
+                  stop-color={s.color}
+                  stop-opacity={ssrModel.series.length > 1 ? "0.16" : "0.24"}
+                />
                 <stop offset="100%" stop-color={s.color} stop-opacity="0.00" />
               </linearGradient>
             ))
           }
         </defs>
+        <line
+          x1="0"
+          y1="38"
+          x2="300"
+          y2="38"
+          stroke="var(--cr-chart-grid)"
+          stroke-width="1"
+          stroke-dasharray="4 4"
+          vector-effect="non-scaling-stroke"
+        />
+        <line
+          x1="0"
+          y1="75"
+          x2="300"
+          y2="75"
+          stroke="var(--cr-chart-grid)"
+          stroke-width="1"
+          stroke-dasharray="4 4"
+          vector-effect="non-scaling-stroke"
+        />
+        <line
+          x1="0"
+          y1="112"
+          x2="300"
+          y2="112"
+          stroke="var(--cr-chart-grid)"
+          stroke-width="1"
+          stroke-dasharray="4 4"
+          vector-effect="non-scaling-stroke"
+        />
         {
-          ssrModel.series.map(
+          ssrSmoothSeries.map(
             (s) =>
               s.fillPath && (
                 <path d={s.fillPath} fill={`url(#${id}-grad-${s.id})`} />
@@ -192,7 +382,7 @@ const rawSinglePoints =
           )
         }
         {
-          ssrModel.series.map(
+          ssrSmoothSeries.map(
             (s) =>
               s.linePath && (
                 <path
@@ -208,6 +398,7 @@ const rawSinglePoints =
           )
         }
       </svg>
+
       <div class="chart-dots" data-chart-dots aria-hidden="true">
         {
           ssrModel.series.map(
@@ -221,68 +412,122 @@ const rawSinglePoints =
           )
         }
       </div>
-    </div>
 
-    <div class="compare-list" data-multi-summary hidden={isSingleMode}>
-      {
-        !isSingleMode &&
-          ssrModel.series.map((s) => {
-            const arrow = s.isPositive ? "▲" : "▼";
-            const trendCol = s.isPositive ? "#16a249" : "#ea4335";
-            return (
-              <div class="compare-row">
-                <div class="compare-info">
-                  <div class="compare-name">
-                    <span class="compare-dot" style={`background:${s.color}`}></span>
-                    <span>{s.shortName}</span>
-                  </div>
-                  <div class="compare-range">
-                    Mín: {formatCurrency(s.minRate, "Bs")} • Máx:{" "}
-                    {formatCurrency(s.maxRate, "Bs")}
-                  </div>
-                </div>
-                <div class="compare-values">
-                  <span class="compare-latest">{formatCurrency(s.latestRate, "Bs")}</span>
-                  <span class="compare-pct" style={`color:${trendCol}`}>
-                    {arrow} {s.changePercent.toFixed(2)}%
-                  </span>
-                </div>
-              </div>
-            );
-          })
-      }
-    </div>
-
-    <div
-      class="detail-wrap"
-      data-detail-wrap
-      hidden={!(isSingleMode && singleSeries)}
-    >
-      <button
-        type="button"
-        class="detail-toggle"
-        data-detail-toggle
-        aria-expanded="false"
-      >
-        <span data-detail-label>Ver historial detallado</span>
-        <span class="detail-chevron" aria-hidden="true">▼</span>
-      </button>
-
-      <div class="detail-list" data-detail-list hidden>
+      <div class="chart-columns" data-chart-columns>
         {
-          rawSinglePoints.map((pt) => (
-            <div class="detail-row">
-              <span>{formatSimpleCaracasDate(pt.date)}</span>
-              <strong>{formatCurrency(pt.rate, "Bs")}</strong>
-            </div>
+          ssrHoverColumns.map((col) => (
+            <button
+              type="button"
+              class="chart-column-trigger"
+              data-col-index={String(col.index)}
+              data-day-key={col.dayKey}
+              aria-label={col.ariaLabel}
+              tabindex={col.index === ssrLastColIdx ? 0 : -1}
+              style={`left: ${col.leftPct.toFixed(3)}%; width: ${col.widthPct.toFixed(3)}%;`}
+            />
           ))
         }
       </div>
+
+      <div class="chart-tooltip" data-chart-tooltip role="tooltip" hidden></div>
     </div>
+
+    <div
+      class="chart-dates"
+      data-chart-dates
+      data-dense={ssrDateLabels.length >= 6 ? "true" : "false"}
+      hidden={ssrDateLabels.length === 0}
+    >
+      {
+        ssrDateLabels.map((item) => (
+          <span class:list={["chart-date-label", { "is-latest": item.isLatest }]}>
+            {item.label}
+          </span>
+        ))
+      }
+    </div>
+
+    {
+      !isHomeVariant && (
+        <>
+          <div class="compare-list" data-multi-summary hidden={isSingleMode}>
+            {!isSingleMode &&
+              ssrModel.series.map((s) => {
+                const arrow = s.isPositive ? "▲" : "▼";
+                const toneClass = s.isPositive ? "is-positive" : "is-negative";
+                const pctStr = formatNumber(Math.abs(s.changePercent), {
+                  precision: 2,
+                });
+                return (
+                  <div class="compare-row">
+                    <div class="compare-info">
+                      <div class="compare-name">
+                        <span
+                          class="compare-dot"
+                          style={`background:${s.color}`}
+                        />
+                        <span>{s.shortName}</span>
+                      </div>
+                      <div class="compare-range">
+                        Mín: {formatCurrency(s.minRate, "Bs")} • Máx:{" "}
+                        {formatCurrency(s.maxRate, "Bs")}
+                      </div>
+                    </div>
+                    <div class="compare-values">
+                      <span class="compare-latest">
+                        {formatCurrency(s.latestRate, "Bs")}
+                      </span>
+                      <span class:list={["compare-pct", toneClass]}>
+                        {arrow} {pctStr}%
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+
+          <div
+            class="detail-wrap"
+            data-detail-wrap
+            hidden={!(isSingleMode && singleSeries)}
+          >
+            <button
+              type="button"
+              class="detail-toggle"
+              data-detail-toggle
+              aria-expanded="false"
+            >
+              <span data-detail-label>Ver historial detallado</span>
+              <span class="detail-chevron" aria-hidden="true">
+                <ChevronDown size={16} />
+              </span>
+            </button>
+
+            <div class="detail-list" data-detail-list hidden>
+              {rawSinglePoints.map((pt) => (
+                <div class="detail-row">
+                  <time
+                    data-live-time
+                    data-raw-date={pt.dayKey}
+                    data-include-time="false"
+                    datetime={toCaracasIsoString(pt.dayKey, false)}
+                  >
+                    {formatNaturalCaracasDateTime(pt.dayKey, undefined, {
+                      includeTime: false,
+                    })}
+                  </time>
+                  <strong>{formatCurrency(pt.rate, "Bs")}</strong>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )
+    }
   </div>
 
   {
-    showFullPageLink && (
+    !isHomeVariant && showFullPageLink && (
       <div class="history-full-link-wrap">
         <a href="/tendencias" class="history-full-link">
           Ver historial completo de 30 días →
@@ -295,8 +540,179 @@ const rawSinglePoints =
 <style>
   .history-panel {
     width: 100%;
-    padding-block: 0.5rem;
+    padding-block: 0.25rem;
+    border: 0;
     container-type: inline-size;
+  }
+
+  /* ── Home Variant HeroUI Surface Card ── */
+  .history-panel.is-home {
+    background-color: var(--cr-surface);
+    box-shadow: var(--cr-shadow);
+    border-radius: 1rem;
+    overflow: hidden;
+    border: 0;
+    padding-block: 0;
+  }
+
+  .home-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+    padding: 1.5rem 1.5rem 0.5rem;
+  }
+
+  .home-tabs[hidden] {
+    display: none;
+  }
+
+  .home-tabs {
+    background-color: var(--cr-tray-inner);
+    padding: 0.25rem;
+    border-radius: 0.75rem;
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    border: 0;
+    max-inline-size: 100%;
+  }
+
+  .home-tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    background: transparent;
+    border-radius: 0.5rem;
+    padding: 0.375rem 0.8125rem;
+    min-block-size: 40px;
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.2;
+    color: var(--cr-text-secondary);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+  }
+
+  .home-tab:hover:not(.is-active) {
+    color: var(--cr-text);
+    background-color: color-mix(in srgb, var(--cr-tray-hover) 55%, transparent);
+  }
+
+  .home-tab.is-active {
+    background-color: var(--cr-nav-active-bg);
+    box-shadow: var(--cr-shadow-sm);
+    color: var(--cr-text);
+    font-weight: 600;
+  }
+
+  .home-stats {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .home-stats-values {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    flex-wrap: wrap;
+  }
+
+  .latest-rate {
+    font-family: var(--font-headline);
+    font-size: 1.5rem;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+    color: var(--cr-text);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .latest-rate.is-compact {
+    font-size: 1.125rem;
+    font-weight: 700;
+  }
+
+  .variation-pill[hidden] {
+    display: none;
+  }
+
+  .variation-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.625rem;
+    border-radius: 999px;
+    border: 0;
+    font-family: var(--font-headline);
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.25;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .variation-pill.is-positive {
+    background-color: color-mix(in srgb, var(--cr-primary) 13%, transparent);
+    color: var(--cr-primary-ink);
+  }
+
+  .variation-pill.is-negative {
+    background-color: color-mix(in srgb, var(--cr-danger) 14%, transparent);
+    color: #dc2626;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .variation-pill.is-negative {
+      color: #f87171;
+    }
+  }
+
+  @supports (color: light-dark(white, black)) {
+    .variation-pill.is-negative {
+      color: light-dark(#b91c1c, #f87171);
+    }
+  }
+
+  .variation-pill.is-flat {
+    background-color: var(--cr-amber-bg);
+    color: var(--cr-tint);
+  }
+
+  .expand-chart-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: 40px;
+    min-block-size: 40px;
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    border: 0;
+    background-color: var(--cr-tray);
+    color: var(--cr-text-secondary);
+    text-decoration: none;
+    flex-shrink: 0;
+    transition: background-color 140ms ease, color 140ms ease;
+  }
+
+  .expand-chart-btn:hover {
+    background-color: var(--cr-tray-hover);
+    color: var(--cr-text);
+  }
+
+  /* ── Currency & Compare Header / Controls ── */
+  .panel-top {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
   }
 
   .history-header {
@@ -305,107 +721,144 @@ const rawSinglePoints =
     align-items: center;
     justify-content: space-between;
     gap: 0.625rem 0.75rem;
-    margin-bottom: 1rem;
+  }
+
+  .panel-title-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.375rem 0.75rem;
+    min-inline-size: 0;
   }
 
   .history-title {
     margin: 0;
+    font-family: var(--font-headline);
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: 700;
+    letter-spacing: -0.015em;
     color: var(--cr-text);
+  }
+
+  .inline-stats[hidden] {
+    display: none;
+  }
+
+  .inline-stats {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
   }
 
   .range-tabs {
     display: inline-flex;
-    border: 1px solid var(--cr-border);
-    border-radius: 8px;
-    overflow: hidden;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    border-radius: 0.75rem;
+    border: 0;
+    background-color: var(--cr-tray-inner);
   }
 
   .range-tab {
     border: 0;
     background: transparent;
+    border-radius: 0.5rem;
     padding: 0.375rem 0.75rem;
-    min-height: 36px;
-    font-family: inherit;
+    min-block-size: 40px;
+    font-family: var(--font-headline);
     font-size: 0.75rem;
     font-weight: 600;
     color: var(--cr-text-secondary);
     cursor: pointer;
-    transition: background-color 150ms ease, color 150ms ease;
+    transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
   }
 
-  .range-tab + .range-tab {
-    border-left: 1px solid var(--cr-border);
+  .range-tab:hover:not(.is-active) {
+    color: var(--cr-text);
+    background-color: color-mix(in srgb, var(--cr-tray-hover) 55%, transparent);
   }
 
   .range-tab.is-active {
-    background-color: var(--cr-primary);
-    color: #ffffff;
+    background-color: var(--cr-nav-active-bg);
+    box-shadow: var(--cr-shadow-sm);
+    color: var(--cr-text);
+    font-weight: 700;
   }
 
-  .range-tab:focus-visible {
-    outline-offset: -3px;
-    position: relative;
-    z-index: 1;
+  .source-filters[hidden] {
+    display: none;
   }
 
   .source-filters {
-    display: flex;
+    display: inline-flex;
     flex-wrap: wrap;
-    flex-wrap: balance;
-    gap: 0.5rem;
-    margin-bottom: 1.25rem;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    border-radius: 0.75rem;
+    border: 0;
+    background-color: var(--cr-tray-inner);
+    align-self: flex-start;
+    max-inline-size: 100%;
   }
 
   .history-panel :global(.source-chip) {
     display: inline-flex;
     align-items: center;
-    gap: 0.375rem;
+    gap: 0.4rem;
     padding: 0.375rem 0.75rem;
-    min-height: 36px;
-    border-radius: 16px;
-    border: 1px solid var(--cr-border);
+    min-block-size: 40px;
+    border-radius: 0.5rem;
+    border: 0;
     background: transparent;
     font-family: inherit;
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--cr-text-secondary);
     cursor: pointer;
-    transition: border-color 150ms ease, color 150ms ease;
+    white-space: nowrap;
+    transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+  }
+
+  .history-panel :global(.source-chip:hover:not(.is-selected)) {
+    color: var(--cr-text);
+    background-color: color-mix(in srgb, var(--cr-tray-hover) 55%, transparent);
   }
 
   .history-panel :global(.source-chip.is-selected) {
-    border-color: var(--chip-color, var(--cr-primary));
-    border-width: 1.5px;
+    background-color: var(--cr-nav-active-bg);
+    box-shadow: var(--cr-shadow-sm);
     color: var(--cr-text);
+    font-weight: 600;
   }
 
   .history-panel :global(.chip-dot) {
-    width: 6px;
-    height: 6px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
     background-color: var(--chip-color, var(--cr-primary));
-    opacity: 0.3;
-    transition: opacity 150ms ease;
+    opacity: 0.35;
+    flex-shrink: 0;
+    transition: opacity 140ms ease;
   }
 
   .history-panel :global(.source-chip.is-selected .chip-dot) {
     opacity: 1;
   }
 
+  /* ── Loading & Empty States ── */
   .history-state-box[hidden] {
     display: none;
   }
 
   .history-state-box {
-    min-height: 150px;
+    min-height: 192px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    padding-inline: 1rem;
+    gap: 0.625rem;
+    padding: 1.5rem;
     text-align: center;
   }
 
@@ -418,7 +871,7 @@ const rawSinglePoints =
   .spinner {
     width: 24px;
     height: 24px;
-    border: 2.5px solid var(--cr-border);
+    border: 2.5px solid var(--cr-tray);
     border-top-color: var(--cr-primary);
     border-radius: 50%;
     animation: cr-spin 0.7s linear infinite;
@@ -430,6 +883,7 @@ const rawSinglePoints =
     }
   }
 
+  /* ── Tonal KPI Stat Tiles (Currency & Single Compare) ── */
   .metrics-grid[hidden] {
     display: none;
   }
@@ -437,14 +891,18 @@ const rawSinglePoints =
   .metrics-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.5rem 0.75rem;
+    gap: 0.5rem;
     margin-bottom: 1rem;
   }
 
   .metric-block {
+    background-color: var(--cr-tray-inner);
+    border-radius: 0.75rem;
+    border: 0;
+    padding: 0.6875rem 0.8125rem;
     display: flex;
     flex-direction: column;
-    gap: 0.125rem;
+    gap: 0.2rem;
     min-inline-size: 0;
   }
 
@@ -454,29 +912,140 @@ const rawSinglePoints =
   }
 
   .metric-label {
-    font-size: 0.75rem;
-    color: var(--cr-text-secondary);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--cr-text-muted);
   }
 
   .metric-value {
-    font-size: clamp(0.8125rem, 3cqi, 0.9375rem);
-    font-weight: 600;
+    font-family: var(--font-headline);
+    font-size: clamp(0.8125rem, 3.2cqi, 0.9375rem);
+    font-weight: 700;
     color: var(--cr-text);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
 
   .metric-change {
-    font-size: clamp(0.75rem, 2.8cqi, 0.875rem);
+    font-size: clamp(0.75rem, 3cqi, 0.875rem);
   }
 
+  .metric-change.is-positive,
+  .history-panel :global(.compare-pct.is-positive) {
+    color: var(--cr-primary-ink);
+  }
+
+  .metric-change.is-negative,
+  .history-panel :global(.compare-pct.is-negative) {
+    color: #dc2626;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .metric-change.is-negative,
+    .history-panel :global(.compare-pct.is-negative) {
+      color: #f87171;
+    }
+  }
+
+  @supports (color: light-dark(white, black)) {
+    .metric-change.is-negative,
+    .history-panel :global(.compare-pct.is-negative) {
+      color: light-dark(#b91c1c, #f87171);
+    }
+  }
+
+  /* ── Edge-to-Edge SVG Chart & Interactive Column Hover ── */
   .chart-wrapper {
     position: relative;
-    height: 150px;
-    margin-bottom: 0.625rem;
+    height: 180px;
+    margin-bottom: 0;
+    padding-inline: 0;
+  }
+
+  .history-panel.is-home .chart-wrapper,
+  .history-panel.is-compare .chart-wrapper {
+    height: 192px;
+  }
+
+  .history-panel.is-home .chart-wrapper {
+    margin-top: 0.625rem;
+  }
+
+  .chart-hover-band[hidden],
+  .chart-crosshair[hidden],
+  .chart-tooltip[hidden],
+  .today-badge[hidden] {
+    display: none;
+  }
+
+  .chart-hover-band {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    z-index: 2;
+    pointer-events: none;
+    background-color: color-mix(in srgb, var(--cr-text) 4.5%, transparent);
+    transition: left 60ms ease, width 60ms ease;
+  }
+
+  .chart-crosshair {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    z-index: 2;
+    pointer-events: none;
+    background-color: color-mix(in srgb, var(--cr-text) 24%, transparent);
+    transform: translateX(-0.5px);
+    transition: left 60ms ease;
+  }
+
+  .today-badge {
+    position: absolute;
+    top: 0.375rem;
+    right: 0.875rem;
+    z-index: 5;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.3125rem 0.625rem;
+    border-radius: 0.5rem;
+    border: 0;
+    background-color: var(--cr-tray-inner);
+    box-shadow: var(--cr-shadow-sm);
+    font-family: var(--font-headline);
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--cr-text);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    pointer-events: none;
+    transition: left 60ms ease, top 60ms ease;
+  }
+
+  .today-badge.is-tracking {
+    pointer-events: auto;
+    box-shadow: var(--cr-shadow-lg);
+  }
+
+  .history-panel.is-home .today-badge:not(.is-tracking) {
+    right: 1.5rem;
+  }
+
+  .today-badge-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background-color: var(--cr-primary);
   }
 
   .chart-svg {
+    position: relative;
+    z-index: 1;
     display: block;
     width: 100%;
     height: 100%;
@@ -485,6 +1054,7 @@ const rawSinglePoints =
   .chart-dots {
     position: absolute;
     inset: 0;
+    z-index: 3;
     pointer-events: none;
   }
 
@@ -492,23 +1062,170 @@ const rawSinglePoints =
     position: absolute;
     left: var(--dot-x);
     top: var(--dot-y);
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
+    box-sizing: border-box;
     border-radius: 50%;
+    border: 2px solid var(--cr-surface);
     background-color: var(--dot-color);
     transform: translate(-50%, -50%);
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--dot-color) 20%, transparent);
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--dot-color) 22%, transparent);
   }
 
+  .chart-columns {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    pointer-events: none;
+  }
+
+  .history-panel :global(.chart-column-trigger) {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: transparent;
+    appearance: none;
+    pointer-events: auto;
+    cursor: crosshair;
+    touch-action: pan-y;
+  }
+
+  .history-panel :global(.chart-column-trigger:focus-visible) {
+    outline: 2px solid color-mix(in srgb, var(--cr-text) 45%, transparent);
+    outline-offset: -2px;
+  }
+
+  .chart-tooltip {
+    position: absolute;
+    top: 0.5rem;
+    left: 0;
+    z-index: 5;
+    min-width: 148px;
+    max-width: min(220px, calc(100% - 1rem));
+    padding: 0.5625rem 0.75rem;
+    border-radius: 0.625rem;
+    border: 0;
+    background-color: var(--cr-surface);
+    box-shadow: var(--cr-shadow-lg);
+    color: var(--cr-text);
+    pointer-events: auto;
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .chart-tooltip {
+      background-color: var(--cr-tray-hover);
+    }
+  }
+
+  @supports (color: light-dark(white, black)) {
+    .chart-tooltip {
+      background-color: light-dark(var(--cr-surface-light), var(--cr-tray-hover-dark));
+    }
+  }
+
+  .history-panel :global(.chart-tooltip-date) {
+    margin-bottom: 0.375rem;
+    font-family: var(--font-headline);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--cr-text-muted);
+  }
+
+  .history-panel :global(.chart-tooltip-rows) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .history-panel :global(.chart-tooltip-row) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    font-size: 0.75rem;
+    line-height: 1.3;
+  }
+
+  .history-panel :global(.chart-tooltip-label) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-inline-size: 0;
+  }
+
+  .history-panel :global(.chart-tooltip-key) {
+    width: 12px;
+    height: 2.5px;
+    border-radius: 999px;
+    background-color: var(--line-color);
+    flex-shrink: 0;
+  }
+
+  .history-panel :global(.chart-tooltip-name) {
+    color: var(--cr-text-secondary);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .history-panel :global(.chart-tooltip-val) {
+    color: var(--cr-text);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .history-panel :global(.chart-tooltip-val.is-missing) {
+    color: var(--cr-text-muted);
+    font-weight: 500;
+  }
+
+  /* ── Bottom Horizontal Date Axis Strip ── */
+  .chart-dates[hidden] {
+    display: none;
+  }
+
+  .chart-dates {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.375rem;
+    padding: 0.75rem 0.25rem 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--cr-text-muted);
+    font-variant-numeric: tabular-nums;
+    user-select: none;
+  }
+
+  .history-panel.is-home .chart-dates {
+    padding: 0.875rem 1.5rem 1.25rem;
+  }
+
+  .history-panel :global(.chart-date-label) {
+    white-space: nowrap;
+  }
+
+  .history-panel :global(.chart-date-label.is-latest) {
+    color: var(--cr-text);
+    font-weight: 700;
+  }
+
+  /* ── Comparison Summary Rows (Tonal Zebra / Gap, Zero 1px Borders) ── */
   .compare-list[hidden] {
     display: none;
   }
 
   .compare-list {
-    margin-top: 0.75rem;
-    margin-bottom: 0.625rem;
+    margin-top: 0.875rem;
+    margin-bottom: 0.375rem;
     display: flex;
     flex-direction: column;
+    gap: 0.375rem;
   }
 
   .history-panel :global(.compare-row) {
@@ -516,12 +1233,15 @@ const rawSinglePoints =
     justify-content: space-between;
     align-items: center;
     gap: 0.75rem;
-    padding-block: 0.75rem;
-    border-bottom: 1px solid var(--cr-border);
+    padding: 0.75rem 0.875rem;
+    border-radius: 0.75rem;
+    border: 0;
+    background-color: var(--cr-tray-inner);
+    transition: background-color 140ms ease;
   }
 
-  .history-panel :global(.compare-row:last-child) {
-    border-bottom: 0;
+  .history-panel :global(.compare-row:nth-child(even)) {
+    background-color: var(--cr-row-alt);
   }
 
   .history-panel :global(.compare-info) {
@@ -533,7 +1253,8 @@ const rawSinglePoints =
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.2rem;
+    font-family: var(--font-headline);
     font-size: 0.875rem;
     font-weight: 600;
     color: var(--cr-text);
@@ -565,29 +1286,25 @@ const rawSinglePoints =
   }
 
   .history-panel :global(.compare-latest) {
-    font-size: 0.875rem;
-    font-weight: 600;
+    font-family: var(--font-headline);
+    font-size: 0.9375rem;
+    font-weight: 700;
     color: var(--cr-text);
   }
 
   .history-panel :global(.compare-pct) {
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 700;
     margin-top: 0.125rem;
   }
 
-  @container (width < 320px) {
-    .history-panel :global(.compare-range) {
-      margin-inline-start: 0;
-    }
-
-    .metrics-grid {
-      gap: 0.375rem;
-    }
-  }
-
+  /* ── Expandable Detail List ── */
   .detail-wrap[hidden] {
     display: none;
+  }
+
+  .detail-wrap {
+    margin-top: 0.875rem;
   }
 
   .detail-toggle {
@@ -596,21 +1313,27 @@ const rawSinglePoints =
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.625rem 0 0.25rem;
-    margin-top: 0.625rem;
+    padding: 0.625rem 0.875rem;
     border: 0;
-    border-top: 1px solid var(--cr-border);
-    background: transparent;
-    color: var(--cr-primary);
+    border-radius: 0.75rem;
+    background-color: var(--cr-tray-inner);
+    color: var(--cr-text);
     font-family: inherit;
     font-size: 0.875rem;
     font-weight: 600;
     cursor: pointer;
+    transition: background-color 140ms ease;
+  }
+
+  .detail-toggle:hover {
+    background-color: var(--cr-tray-hover);
   }
 
   .detail-chevron {
+    display: inline-flex;
+    align-items: center;
+    color: var(--cr-text-secondary);
     transition: transform 180ms ease;
-    font-size: 0.75rem;
   }
 
   .detail-toggle.is-open .detail-chevron {
@@ -623,7 +1346,13 @@ const rawSinglePoints =
 
   .detail-list {
     margin-top: 0.5rem;
-    padding-inline: 0.25rem;
+    padding: 0.25rem;
+    border-radius: 0.75rem;
+    border: 0;
+    background-color: var(--cr-tray-inner);
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
   }
 
   .history-panel :global(.detail-row) {
@@ -631,27 +1360,29 @@ const rawSinglePoints =
     justify-content: space-between;
     align-items: center;
     gap: 0.75rem;
-    padding-block: 0.625rem;
-    border-bottom: 1px solid var(--cr-border);
+    padding: 0.5625rem 0.75rem;
+    border: 0;
+    border-radius: 0.5rem;
+    background-color: var(--cr-card-inner);
     font-size: 0.875rem;
-    color: var(--cr-text);
+    color: var(--cr-text-secondary);
     font-variant-numeric: tabular-nums;
   }
 
+  .history-panel :global(.detail-row:nth-child(even)) {
+    background-color: var(--cr-row-alt);
+  }
+
   .history-panel :global(.detail-row strong) {
-    color: var(--cr-primary);
-    font-weight: 600;
+    color: var(--cr-text);
+    font-weight: 700;
     white-space: nowrap;
   }
 
-  .history-panel :global(.detail-row:last-child) {
-    border-bottom: 0;
-  }
-
+  /* ── Full History CTA Link ── */
   .history-full-link-wrap {
-    margin-top: 0.875rem;
-    padding-top: 0.625rem;
-    border-top: 1px solid var(--cr-border);
+    margin-top: 1rem;
+    border: 0;
     text-align: center;
   }
 
@@ -660,21 +1391,151 @@ const rawSinglePoints =
     align-items: center;
     justify-content: center;
     min-block-size: 40px;
-    padding-inline: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.75rem;
+    border: 0;
+    background-color: var(--cr-tray);
+    color: var(--cr-text);
     font-size: 0.8125rem;
     font-weight: 600;
-    color: var(--cr-primary);
     text-decoration: none;
-  }
-
-  @media (pointer: coarse) {
-    .history-full-link {
-      min-block-size: 44px;
-    }
+    transition: background-color 140ms ease;
   }
 
   .history-full-link:hover {
-    text-decoration: underline;
+    background-color: var(--cr-tray-hover);
+  }
+
+  /* ── Coarse Touch Targets (44px) ── */
+  @media (pointer: coarse) {
+    .home-tab,
+    .range-tab,
+    .history-panel :global(.source-chip),
+    .history-full-link {
+      min-block-size: 44px;
+    }
+
+    .expand-chart-btn {
+      min-inline-size: 44px;
+      min-block-size: 44px;
+      width: 44px;
+      height: 44px;
+    }
+  }
+
+  /* ── Container Query Responsiveness ── */
+  @container (width < 520px) {
+    .home-header {
+      padding: 1.125rem 1rem 0.375rem;
+    }
+
+    .home-stats {
+      width: 100%;
+      justify-content: space-between;
+    }
+
+    .history-panel.is-home .today-badge:not(.is-tracking) {
+      right: 1rem;
+    }
+
+    .history-panel.is-home .chart-dates {
+      padding: 0.75rem 1rem 1rem;
+    }
+  }
+
+  @container (width < 360px) {
+    .metric-block {
+      padding: 0.5625rem 0.5rem;
+    }
+
+    .chart-dates[data-dense="true"] :global(.chart-date-label:nth-child(even):not(:last-child)) {
+      display: none;
+    }
+  }
+
+  @container (width < 320px) {
+    .history-panel :global(.compare-range) {
+      margin-inline-start: 0;
+    }
+
+    .metrics-grid {
+      gap: 0.375rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .home-tab,
+    .range-tab,
+    .history-panel :global(.source-chip),
+    .expand-chart-btn,
+    .chart-hover-band,
+    .chart-crosshair,
+    .today-badge,
+    .detail-toggle,
+    .detail-chevron,
+    .history-full-link {
+      transition: none;
+    }
+  }
+
+  /* ── Mandatory Forced Colors / High Contrast Fallbacks ── */
+  @media (forced-colors: active) {
+    .history-panel.is-home,
+    .home-tabs,
+    .range-tabs,
+    .source-filters,
+    .metric-block,
+    .today-badge,
+    .chart-tooltip,
+    .expand-chart-btn,
+    .detail-toggle,
+    .detail-list,
+    .history-full-link,
+    .history-panel :global(.compare-row),
+    .history-panel :global(.detail-row) {
+      border: 1px solid ButtonBorder;
+    }
+
+    .chart-hover-band {
+      background-color: transparent;
+      border-inline: 1px dashed CanvasText;
+    }
+
+    .chart-crosshair {
+      background-color: Highlight;
+    }
+
+    .history-panel :global(.chart-column-trigger:focus-visible) {
+      outline: 2px solid Highlight;
+    }
+
+    .home-tab.is-active,
+    .range-tab.is-active,
+    .history-panel :global(.source-chip.is-selected) {
+      background-color: Highlight;
+      color: HighlightText;
+      border: 1px solid Highlight;
+    }
+
+    .variation-pill,
+    .history-panel :global(.compare-pct),
+    .metric-change {
+      border: 1px solid ButtonBorder;
+      color: CanvasText;
+    }
+
+    .history-panel :global(.chart-dot-marker) {
+      background-color: Highlight;
+      border: 2px solid CanvasText;
+    }
+
+    .history-panel :global(.chip-dot),
+    .history-panel :global(.compare-dot),
+    .history-panel :global(.chart-tooltip-key),
+    .today-badge-dot {
+      background-color: Highlight;
+      border: 1px solid CanvasText;
+    }
   }
 </style>
 

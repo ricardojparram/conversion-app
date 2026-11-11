@@ -6,10 +6,11 @@ export type RouteKey =
   | "brecha-cambiaria"
   | "tendencias"
   | "preguntas-frecuentes"
-  | "privacidad";
+  | "privacidad"
+  | "not-found";
 
 export interface PublicRouteConfig {
-  key: RouteKey;
+  key: Exclude<RouteKey, "not-found">;
   path: string;
   label: string;
   changefreq: "hourly" | "daily" | "weekly" | "monthly";
@@ -19,7 +20,7 @@ export interface PublicRouteConfig {
 export const SITE_NAME = "Cambio rápido";
 export const DEFAULT_SITE_URL = "https://cambiorapido.app";
 
-export const NAV_ROUTES: Array<{ key: RouteKey; path: string; label: string }> = [
+export const NAV_ROUTES: Array<{ key: PublicRouteConfig["key"]; path: string; label: string }> = [
   { key: "home", path: "/", label: "Calculadora" },
   { key: "dolar-bcv", path: "/dolar-bcv", label: "Dólar BCV" },
   { key: "euro-bcv", path: "/euro-bcv", label: "Euro BCV" },
@@ -63,18 +64,91 @@ export const PUBLIC_ROUTES: PublicRouteConfig[] = [
   },
 ];
 
-export function getSiteUrl(envSiteUrl?: string): string {
+function readRuntimeEnv(key: string): string | undefined {
+  const procVal = typeof process !== "undefined" ? process.env[key] : undefined;
+  if (procVal && procVal.trim().length > 0) return procVal.trim();
   const metaEnv = (
     import.meta as unknown as { env?: Record<string, string | undefined> }
   ).env;
-  const raw =
-    envSiteUrl ??
-    metaEnv?.PUBLIC_SITE_URL ??
-    (typeof process !== "undefined" ? process.env.PUBLIC_SITE_URL : undefined) ??
-    DEFAULT_SITE_URL;
+  const metaVal = metaEnv?.[key];
+  if (metaVal && metaVal.trim().length > 0) return metaVal.trim();
+  return undefined;
+}
 
+function normalizeOrigin(raw?: string): string {
+  if (!raw) return "";
   const trimmed = raw.trim().replace(/\/+$/, "");
-  return trimmed.length > 0 ? trimmed : DEFAULT_SITE_URL;
+  if (!trimmed) return "";
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
+export function getSiteUrl(envSiteUrl?: string): string {
+  const explicit = normalizeOrigin(envSiteUrl);
+  if (explicit) return explicit;
+
+  const publicSiteUrl = normalizeOrigin(readRuntimeEnv("PUBLIC_SITE_URL"));
+  if (publicSiteUrl) return publicSiteUrl;
+
+  const vercelEnv = readRuntimeEnv("VERCEL_ENV");
+  const vercelProdUrl = normalizeOrigin(readRuntimeEnv("VERCEL_PROJECT_PRODUCTION_URL"));
+  const vercelUrl = normalizeOrigin(readRuntimeEnv("VERCEL_URL"));
+
+  if (vercelEnv === "preview" && vercelUrl) {
+    return vercelUrl;
+  }
+  if (vercelProdUrl) {
+    return vercelProdUrl;
+  }
+  if (vercelUrl) {
+    return vercelUrl;
+  }
+
+  return DEFAULT_SITE_URL;
+}
+
+export function getSiteHostname(siteUrl?: string): string {
+  try {
+    return new URL(getSiteUrl(siteUrl)).hostname.toLowerCase();
+  } catch {
+    return "cambiorapido.app";
+  }
+}
+
+export function isIndexableDeployment(options?: {
+  siteUrl?: string;
+  indexableEnv?: string;
+  vercelEnv?: string;
+}): boolean {
+  const rawOverride = (options?.indexableEnv ?? readRuntimeEnv("PUBLIC_INDEXABLE"))?.toLowerCase();
+  if (rawOverride === "true" || rawOverride === "1") return true;
+  if (rawOverride === "false" || rawOverride === "0") return false;
+
+  const vercelEnv = (options?.vercelEnv ?? readRuntimeEnv("VERCEL_ENV"))?.toLowerCase();
+  if (vercelEnv === "preview" || vercelEnv === "development") {
+    return false;
+  }
+
+  const host = getSiteHostname(options?.siteUrl);
+  if (
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host === "[::1]" ||
+    host.endsWith(".vercel.app") ||
+    host.endsWith(".local")
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+export function getGoogleSiteVerification(): string | null {
+  return readRuntimeEnv("PUBLIC_GOOGLE_SITE_VERIFICATION") ?? null;
+}
+
+export function getContactEmail(): string | null {
+  return readRuntimeEnv("PUBLIC_CONTACT_EMAIL") ?? null;
 }
 
 export function buildCanonicalUrl(pathname: string, siteUrl?: string): string {

@@ -2,6 +2,7 @@
 import { calculateBrecha } from "@/lib/rates/brecha";
 import { formatCurrency, formatNumber } from "@/lib/rates/format";
 import type { ResolvedRate } from "@/lib/rates/types";
+import ArrowRight from "./icons/ArrowRight.astro";
 
 interface Props {
   rates: ResolvedRate[];
@@ -9,11 +10,7 @@ interface Props {
   heading?: string;
 }
 
-const {
-  rates = [],
-  interactive = false,
-  heading = "Brecha cambiaria hoy (Dólar BCV vs USDT)",
-} = Astro.props;
+const { rates = [], interactive = false, heading } = Astro.props;
 
 const usdBcv = rates.find((r) => r.currencyId === 1) ?? null;
 const usdtSell = rates.find((r) => r.currencyId === 3) ?? null;
@@ -22,64 +19,60 @@ const hasBoth = Boolean(usdBcv && usdtSell);
 const brecha = hasBoth
   ? calculateBrecha(usdBcv!.effectiveRate, usdtSell!.effectiveRate, 100)
   : null;
+
+const resolvedHeading =
+  heading ??
+  (brecha
+    ? `Diferencia entre BCV y USDT (${formatNumber(brecha.percentage)}%)`
+    : "Brecha cambiaria hoy (Dólar BCV vs USDT)");
+
+const resolvedSub = interactive
+  ? "Diferencia neta según la tasa que aplique tu comercio o contraparte."
+  : "Comparativa directa para compras y cobros cotidianos.";
+
+const bcvRatioPct =
+  brecha && brecha.usdtRate > 0 && brecha.bcvRate > 0
+    ? brecha.usdtRate >= brecha.bcvRate
+      ? Math.max(0, Math.min(100, (brecha.bcvRate / brecha.usdtRate) * 100))
+      : 100
+    : 0;
+const usdtBasePct =
+  brecha && brecha.usdtRate > 0 && brecha.bcvRate > 0
+    ? brecha.usdtRate >= brecha.bcvRate
+      ? bcvRatioPct
+      : Math.max(0, Math.min(100, (brecha.usdtRate / brecha.bcvRate) * 100))
+    : 0;
+const gapRatioPct =
+  brecha && brecha.usdtRate >= brecha.bcvRate
+    ? Math.max(0, 100 - bcvRatioPct)
+    : 0;
+
+const presets = [10, 50, 100, 500];
 ---
 
-<section class="brecha-box" aria-labelledby="brecha-summary-heading">
-  <div class="brecha-header">
-    <div>
-      <h2 id="brecha-summary-heading" class="brecha-heading">{heading}</h2>
-      <p class="brecha-sub">
-        Diferencia en vivo entre el tipo de cambio oficial del BCV y la referencia USDT Venta en Binance P2P.
-      </p>
-    </div>
-    {
-      !interactive && (
-        <a href="/brecha-cambiaria" class="brecha-more-link">
-          Abrir comparador →
-        </a>
-      )
-    }
+<section class="brecha-section" aria-labelledby="brecha-summary-heading">
+  <div class="brecha-intro">
+    <h2 id="brecha-summary-heading" class="brecha-heading">{resolvedHeading}</h2>
+    <p class="brecha-sub">{resolvedSub}</p>
   </div>
 
   {
     brecha ? (
-      <div
-        class="brecha-content"
-        data-brecha-calc={interactive ? "true" : undefined}
+      <article
+        class="brecha-card"
+        data-brecha-calc="true"
         data-bcv-rate={String(brecha.bcvRate)}
         data-usdt-rate={String(brecha.usdtRate)}
       >
-        <div class="brecha-kpis">
-          <div class="kpi-card">
-            <span class="kpi-label">Dólar BCV</span>
-            <strong class="kpi-value is-green">
-              {formatCurrency(brecha.bcvRate, "Bs")}
-            </strong>
-          </div>
-          <div class="kpi-card">
-            <span class="kpi-label">USDT Binance (Venta)</span>
-            <strong class="kpi-value is-red">
-              {formatCurrency(brecha.usdtRate, "Bs")}
-            </strong>
-          </div>
-          <div class="kpi-card is-highlight">
-            <span class="kpi-label">Brecha cambiaria</span>
-            <strong class="kpi-value">
-              {formatNumber(brecha.percentage)}%
-            </strong>
-            <span class="kpi-note">
-              +{formatCurrency(brecha.differenceBs, "Bs")} por cada $1
-            </span>
-          </div>
-        </div>
+        <div class="brecha-top">
+          <h3 class="brecha-question">
+            ¿Si pagas o cobras $<span data-brecha-amount>{formatNumber(brecha.amountUsd, { precision: 0 })}</span> hoy, cuánto cambia el monto?
+          </h3>
 
-        {
-          interactive && (
-            <div class="brecha-sim">
-              <label for="brecha-amount-input" class="sim-label">
-                Simular monto en USD / USDT:
-              </label>
-              <div class="sim-input-row">
+          <div class="brecha-controls">
+            {interactive && (
+              <label class="sim-input-row" for="brecha-amount-input">
+                <span class="visually-hidden">Simular monto en USD o USDT</span>
                 <span class="sim-prefix" aria-hidden="true">$</span>
                 <input
                   id="brecha-amount-input"
@@ -91,46 +84,119 @@ const brecha = hasBoth
                   class="sim-input"
                   data-brecha-input
                 />
-              </div>
-            </div>
-          )
-        }
+              </label>
+            )}
 
-        <div class="brecha-impact" aria-live="polite">
-          <div class="impact-row">
-            <span>
-              Al cambiar{" "}
-              <strong data-brecha-amount>{formatNumber(brecha.amountUsd, { precision: 0 })}</strong>{" "}
-              divisas a tasa BCV:
-            </span>
-            <strong data-brecha-bcv-total>{formatCurrency(brecha.bcvTotalBs, "Bs")}</strong>
-          </div>
-          <div class="impact-row">
-            <span>
-              Al cambiar{" "}
-              <strong data-brecha-amount-b>{formatNumber(brecha.amountUsd, { precision: 0 })}</strong>{" "}
-              USDT en Binance P2P:
-            </span>
-            <strong data-brecha-usdt-total>{formatCurrency(brecha.usdtTotalBs, "Bs")}</strong>
-          </div>
-          <div class="impact-row is-diff">
-            <span>Diferencia total en Bolívares:</span>
-            <strong data-brecha-impact>{formatCurrency(brecha.impactBs, "Bs")}</strong>
-          </div>
-          <div class="impact-row is-diff-usd">
-            <span>Diferencia en $ (a tasa USDT):</span>
-            <strong data-brecha-impact-usd-usdt>
-              {formatCurrency(brecha.impactUsdAtUsdt, "$")}
-            </strong>
-          </div>
-          <div class="impact-row is-diff-usd">
-            <span>Diferencia en $ (a tasa BCV):</span>
-            <strong data-brecha-impact-usd-bcv>
-              {formatCurrency(brecha.impactUsdAtBcv, "$")}
-            </strong>
+            <div
+              class="preset-tray"
+              role="group"
+              aria-label="Seleccionar monto para simulación"
+            >
+              {presets.map((preset) => (
+                <button
+                  type="button"
+                  class:list={["preset-btn", { "is-active": preset === 100 }]}
+                  data-brecha-preset={String(preset)}
+                  aria-pressed={preset === 100 ? "true" : "false"}
+                >
+                  ${preset}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+
+        <div class="bars-stack">
+          <div class="bar-group">
+            <div class="bar-header">
+              <div class="bar-label">
+                <span class="legend-dot is-bcv" aria-hidden="true" />
+                <span>A tasa oficial BCV ({formatCurrency(brecha.bcvRate, "Bs")})</span>
+              </div>
+              <strong class="bar-total" data-brecha-bcv-total>
+                {formatCurrency(brecha.bcvTotalBs, "Bs")}
+              </strong>
+            </div>
+            <div class="bar-track" aria-hidden="true">
+              <div
+                class="bar-fill-bcv"
+                data-brecha-bar-bcv
+                style={`width: ${bcvRatioPct.toFixed(2)}%;`}
+              />
+            </div>
+          </div>
+
+          <div class="bar-group">
+            <div class="bar-header">
+              <div class="bar-label">
+                <span class="legend-dot is-usdt" aria-hidden="true" />
+                <span>A referencia USDT Binance ({formatCurrency(brecha.usdtRate, "Bs")})</span>
+              </div>
+              <strong class="bar-total" data-brecha-usdt-total>
+                {formatCurrency(brecha.usdtTotalBs, "Bs")}
+              </strong>
+            </div>
+            <div class="bar-track is-segmented" aria-hidden="true">
+              <div
+                class="bar-fill-bcv"
+                data-brecha-bar-usdt-base
+                style={`width: ${usdtBasePct.toFixed(2)}%;`}
+              />
+              <div
+                class="bar-fill-gap"
+                data-brecha-bar-usdt-gap
+                style={`width: ${gapRatioPct.toFixed(2)}%;`}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="brecha-summary-tray" aria-live="polite">
+          <div class="summary-copy">
+            <span>
+              Diferencia por $<span data-brecha-amount-b>{formatNumber(brecha.amountUsd, { precision: 0 })}</span>:
+            </span>{" "}
+            <strong class="summary-impact-bs" data-brecha-impact>
+              {brecha.impactBs > 0 ? "+" : ""}
+              {formatCurrency(brecha.impactBs, "Bs")}
+            </strong>{" "}
+            <span class="summary-paren">
+              (equivalen a{" "}
+              <strong class="summary-impact-usd" data-brecha-impact-usd-bcv>
+                ${formatNumber(brecha.impactUsdAtBcv)}
+              </strong>{" "}
+              a dólar BCV ·{" "}
+              <span data-brecha-pct>
+                {brecha.percentage > 0 ? "+" : ""}
+                {formatNumber(brecha.percentage)}%
+              </span>
+              )
+            </span>
+            {interactive ? (
+              <span class="summary-usdt-chip">
+                Equiv. USDT:{" "}
+                <strong data-brecha-impact-usd-usdt>
+                  ${formatNumber(brecha.impactUsdAtUsdt)}
+                </strong>
+              </span>
+            ) : (
+              <span class="visually-hidden">
+                Equivalente a tasa USDT:{" "}
+                <span data-brecha-impact-usd-usdt>
+                  ${formatNumber(brecha.impactUsdAtUsdt)}
+                </span>
+              </span>
+            )}
+          </div>
+
+          {!interactive && (
+            <a href="/brecha-cambiaria" class="brecha-more-link">
+              <span>Abrir comparador</span>
+              <ArrowRight size={15} />
+            </a>
+          )}
+        </div>
+      </article>
     ) : (
       <p class="brecha-empty">
         Conecta tu sesión a las tasas actualizadas para calcular la brecha cambiaria en vivo.
@@ -140,173 +206,104 @@ const brecha = hasBoth
 </section>
 
 <style>
-  .brecha-box {
+  .brecha-section {
     width: 100%;
     container-type: inline-size;
-    padding: clamp(0.875rem, 3.5vw, 1.25rem);
-    border-radius: 14px;
-    border: 1px solid var(--cr-border);
-    background-color: var(--cr-bg-secondary);
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.875rem;
   }
 
-  .brecha-header {
+  .brecha-intro {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 0.75rem;
+    flex-direction: column;
+    gap: 0.25rem;
   }
 
   .brecha-heading {
     margin: 0;
-    font-size: 1.125rem;
+    font-family: var(--font-headline);
+    font-size: clamp(1.125rem, 3vw, 1.25rem);
     font-weight: 700;
+    letter-spacing: -0.02em;
     color: var(--cr-text);
     text-wrap: balance;
   }
 
   .brecha-sub {
-    margin: 0.25rem 0 0;
+    margin: 0;
     font-size: 0.875rem;
     line-height: 1.55;
     color: var(--cr-text-secondary);
-    max-width: 56ch;
+    max-width: 60ch;
     text-wrap: pretty;
   }
 
-  .brecha-more-link {
-    display: inline-flex;
-    align-items: center;
-    min-block-size: 36px;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--cr-primary);
-    text-decoration: none;
-    white-space: nowrap;
-  }
-
-  @media (pointer: coarse) {
-    .brecha-more-link {
-      min-block-size: 44px;
-    }
-  }
-
-  .brecha-more-link:hover {
-    text-decoration: underline;
-  }
-
-  .brecha-kpis {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.625rem;
-  }
-
-  @container (width >= 380px) {
-    .brecha-kpis {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 0.75rem;
-    }
-
-    .kpi-card.is-highlight {
-      grid-column: 1 / -1;
-    }
-  }
-
-  @container (width >= 540px) {
-    .brecha-kpis {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .kpi-card.is-highlight {
-      grid-column: auto;
-    }
-  }
-
-  .kpi-card {
-    padding: clamp(0.75rem, 2.5vw, 0.9375rem) clamp(0.75rem, 3vw, 1rem);
-    border-radius: 10px;
-    border: 1px solid var(--cr-border);
-    background-color: var(--cr-bg);
+  .brecha-card {
+    background-color: var(--cr-surface);
+    box-shadow: var(--cr-shadow);
+    border-radius: 1rem;
+    padding: clamp(1.25rem, 4vw, 1.75rem);
+    border: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
-    min-inline-size: 0;
+    gap: 1.375rem;
   }
 
-  .kpi-card.is-highlight {
-    border-color: var(--cr-tint);
-  }
-
-  .kpi-label {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--cr-text-secondary);
-  }
-
-  .kpi-value {
-    font-size: clamp(1.0625rem, 4cqi, 1.25rem);
-    font-weight: 700;
-    color: var(--cr-text);
-    font-variant-numeric: tabular-nums;
-  }
-
-  .kpi-value.is-green {
-    color: var(--cr-primary);
-  }
-
-  .kpi-value.is-red {
-    color: var(--cr-danger);
-  }
-
-  .kpi-note {
-    font-size: 0.75rem;
-    color: var(--cr-text-secondary);
-    font-variant-numeric: tabular-nums;
-  }
-
-  .brecha-sim {
+  .brecha-top {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.625rem 0.75rem;
-    margin-top: 0.375rem;
+    justify-content: space-between;
+    gap: 0.875rem 1rem;
   }
 
-  .sim-label {
-    font-size: 0.875rem;
-    font-weight: 600;
+  .brecha-question {
+    margin: 0;
+    font-family: var(--font-headline);
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.35;
     color: var(--cr-text);
+    text-wrap: balance;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .brecha-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   .sim-input-row {
     display: inline-flex;
     align-items: center;
-    height: 44px;
-    border: 1px solid var(--cr-border);
-    border-radius: 10px;
+    gap: 0.3rem;
+    min-block-size: 38px;
     padding-inline: 0.75rem;
-    gap: 0.375rem;
-    background-color: var(--cr-bg);
-    max-inline-size: 100%;
+    border: 0;
+    border-radius: 0.75rem;
+    background-color: var(--cr-tray-inner);
+    cursor: text;
   }
 
   .sim-prefix {
+    font-size: 0.875rem;
     font-weight: 700;
-    color: var(--cr-text-secondary);
+    color: var(--cr-text-muted);
   }
 
   .sim-input {
-    width: 120px;
+    width: 5.5rem;
     min-inline-size: 0;
     border: 0;
+    padding: 0;
     background: transparent;
     color: var(--cr-text);
-    font-family: inherit;
-    font-size: 1rem;
-    font-weight: 600;
+    font-family: var(--font-headline);
+    font-size: 0.9375rem;
+    font-weight: 700;
     font-variant-numeric: tabular-nums;
   }
 
@@ -315,64 +312,267 @@ const brecha = hasBoth
   }
 
   .sim-input-row:has(.sim-input:focus-visible) {
-    border-color: var(--cr-primary);
     outline: 3px solid var(--cr-primary);
     outline-offset: 2px;
   }
 
-  .brecha-impact {
-    margin-top: 0.75rem;
-    padding: clamp(0.75rem, 3vw, 1rem);
-    border-radius: 10px;
-    background-color: var(--cr-bg);
-    border: 1px solid var(--cr-border);
-    display: flex;
-    flex-direction: column;
-    gap: 0.5625rem;
-    font-size: 0.875rem;
-    font-variant-numeric: tabular-nums;
+  .preset-tray {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    border-radius: 0.75rem;
+    background-color: var(--cr-tray-inner);
+    border: 0;
   }
 
-  .impact-row {
+  .preset-btn {
+    min-block-size: 30px;
+    padding: 0.25rem 0.75rem;
+    border: 0;
+    border-radius: 0.5rem;
+    background: transparent;
+    color: var(--cr-text-muted);
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 150ms ease, color 150ms ease;
+  }
+
+  .preset-btn:hover {
+    color: var(--cr-text);
+  }
+
+  .preset-btn.is-active {
+    background-color: var(--cr-nav-active-bg);
+    color: var(--cr-text);
+    font-weight: 700;
+    box-shadow: var(--cr-shadow-sm);
+  }
+
+  .bars-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .bar-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .bar-header {
     display: flex;
     flex-wrap: wrap;
-    justify-content: space-between;
     align-items: baseline;
+    justify-content: space-between;
     gap: 0.25rem 0.75rem;
+  }
+
+  .bar-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
     color: var(--cr-text-secondary);
   }
 
-  .impact-row strong {
-    color: var(--cr-text);
-    font-weight: 600;
+  .legend-dot {
+    width: 0.5625rem;
+    height: 0.5625rem;
+    border-radius: 999px;
+    flex-shrink: 0;
   }
 
-  .impact-row > strong {
-    margin-inline-start: auto;
+  .legend-dot.is-bcv {
+    background-color: var(--cr-primary);
+  }
+
+  .legend-dot.is-usdt {
+    background-color: var(--cr-amber-bar);
+  }
+
+  .bar-total {
+    font-family: var(--font-headline);
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--cr-text);
+    font-variant-numeric: tabular-nums;
     white-space: nowrap;
-    text-align: right;
   }
 
-  .impact-row.is-diff {
-    padding-top: 0.5rem;
-    border-top: 1px solid var(--cr-border);
-    color: var(--cr-text);
+  .bar-track {
+    width: 100%;
+    height: 0.75rem;
+    border-radius: 999px;
+    background-color: var(--cr-tray-inner);
+    overflow: hidden;
+    display: flex;
+    border: 0;
   }
 
-  .impact-row.is-diff strong,
-  .impact-row.is-diff-usd strong {
+  .bar-fill-bcv {
+    height: 100%;
+    background-color: var(--cr-primary);
+    border-radius: 999px;
+  }
+
+  .bar-track.is-segmented .bar-fill-bcv {
+    border-radius: 999px 0 0 999px;
+  }
+
+  .bar-fill-gap {
+    height: 100%;
+    background-color: var(--cr-amber-bar);
+    border-radius: 0 999px 999px 0;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .bar-fill-bcv,
+    .bar-fill-gap {
+      transition: width 320ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+  }
+
+  .brecha-summary-tray {
+    background-color: var(--cr-tray-inner);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    border: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.625rem 1rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .summary-copy {
+    font-size: 0.8125rem;
+    line-height: 1.55;
+    color: var(--cr-text-secondary);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.375rem;
+  }
+
+  .summary-impact-bs {
     color: var(--cr-tint);
     font-weight: 700;
   }
 
-  .impact-row.is-diff-usd {
+  .summary-paren {
+    color: var(--cr-text-secondary);
+  }
+
+  .summary-impact-usd {
     color: var(--cr-text);
+    font-weight: 700;
+  }
+
+  .summary-usdt-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.1875rem 0.5625rem;
+    border-radius: 999px;
+    background-color: var(--cr-amber-bg);
+    color: var(--cr-tint);
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-inline-start: 0.25rem;
+  }
+
+  .summary-usdt-chip strong {
+    font-weight: 700;
+  }
+
+  .brecha-more-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3125rem;
+    min-block-size: 36px;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--cr-primary-ink);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .brecha-more-link:hover {
+    text-decoration: underline;
   }
 
   .brecha-empty {
     margin: 0;
+    padding: 1.25rem;
+    border: 0;
+    border-radius: 1rem;
+    background-color: var(--cr-surface);
+    box-shadow: var(--cr-shadow);
     font-size: 0.875rem;
     color: var(--cr-text-secondary);
+  }
+
+  @media (pointer: coarse) {
+    .preset-btn,
+    .sim-input-row,
+    .brecha-more-link {
+      min-block-size: 44px;
+    }
+
+    .preset-btn {
+      min-inline-size: 44px;
+    }
+  }
+
+  @container (width < 520px) {
+    .brecha-controls {
+      width: 100%;
+    }
+
+    .sim-input-row {
+      width: 100%;
+      justify-content: flex-start;
+    }
+
+    .preset-tray {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .preset-btn {
+      text-align: center;
+      padding-inline: 0.375rem;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .brecha-card,
+    .preset-tray,
+    .preset-btn.is-active,
+    .sim-input-row,
+    .bar-track,
+    .brecha-summary-tray,
+    .summary-usdt-chip,
+    .brecha-empty {
+      border: 1px solid ButtonBorder;
+    }
+
+    .bar-fill-bcv {
+      background-color: Highlight;
+    }
+
+    .bar-fill-gap {
+      background-color: ButtonText;
+    }
   }
 </style>
 
@@ -384,34 +584,96 @@ const brecha = hasBoth
     const bcvRate = Number(root.dataset.bcvRate ?? "0");
     const usdtRate = Number(root.dataset.usdtRate ?? "0");
     const input = root.querySelector<HTMLInputElement>("[data-brecha-input]");
+    const presetBtns = Array.from(
+      root.querySelectorAll<HTMLButtonElement>("[data-brecha-preset]"),
+    );
     const amtEl = root.querySelector<HTMLElement>("[data-brecha-amount]");
     const amtBEl = root.querySelector<HTMLElement>("[data-brecha-amount-b]");
     const bcvTotalEl = root.querySelector<HTMLElement>("[data-brecha-bcv-total]");
     const usdtTotalEl = root.querySelector<HTMLElement>("[data-brecha-usdt-total]");
     const impactEl = root.querySelector<HTMLElement>("[data-brecha-impact]");
-    const impactUsdUsdtEl = root.querySelector<HTMLElement>("[data-brecha-impact-usd-usdt]");
-    const impactUsdBcvEl = root.querySelector<HTMLElement>("[data-brecha-impact-usd-bcv]");
+    const impactUsdUsdtEl = root.querySelector<HTMLElement>(
+      "[data-brecha-impact-usd-usdt]",
+    );
+    const impactUsdBcvEl = root.querySelector<HTMLElement>(
+      "[data-brecha-impact-usd-bcv]",
+    );
+    const pctEl = root.querySelector<HTMLElement>("[data-brecha-pct]");
+    const bcvBarEl = root.querySelector<HTMLElement>("[data-brecha-bar-bcv]");
+    const usdtBaseBarEl = root.querySelector<HTMLElement>(
+      "[data-brecha-bar-usdt-base]",
+    );
+    const usdtGapBarEl = root.querySelector<HTMLElement>("[data-brecha-bar-usdt-gap]");
 
-    if (!input) return;
-
-    input.addEventListener("input", () => {
-      const parsed = Number.parseFloat(input.value);
-      const amount = Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
-      const result = calculateBrecha(bcvRate, usdtRate, amount);
-      const amountText = formatNumber(amount, {
-        precision: Number.isInteger(amount) ? 0 : 2,
+    const applyAmount = (amount: number, syncInput: boolean) => {
+      const safeAmount = Number.isFinite(amount) && amount >= 0 ? amount : 0;
+      const result = calculateBrecha(bcvRate, usdtRate, safeAmount);
+      const amountText = formatNumber(safeAmount, {
+        precision: Number.isInteger(safeAmount) ? 0 : 2,
       });
+
       if (amtEl) amtEl.textContent = amountText;
       if (amtBEl) amtBEl.textContent = amountText;
       if (bcvTotalEl) bcvTotalEl.textContent = formatCurrency(result.bcvTotalBs, "Bs");
       if (usdtTotalEl) usdtTotalEl.textContent = formatCurrency(result.usdtTotalBs, "Bs");
-      if (impactEl) impactEl.textContent = formatCurrency(result.impactBs, "Bs");
+      if (impactEl) {
+        const prefix = result.impactBs > 0 ? "+" : "";
+        impactEl.textContent = `${prefix}${formatCurrency(result.impactBs, "Bs")}`;
+      }
       if (impactUsdUsdtEl) {
-        impactUsdUsdtEl.textContent = formatCurrency(result.impactUsdAtUsdt, "$");
+        impactUsdUsdtEl.textContent = `$${formatNumber(result.impactUsdAtUsdt)}`;
       }
       if (impactUsdBcvEl) {
-        impactUsdBcvEl.textContent = formatCurrency(result.impactUsdAtBcv, "$");
+        impactUsdBcvEl.textContent = `$${formatNumber(result.impactUsdAtBcv)}`;
       }
-    });
+      if (pctEl) {
+        const pctPrefix = result.percentage > 0 ? "+" : "";
+        pctEl.textContent = `${pctPrefix}${formatNumber(result.percentage)}%`;
+      }
+
+      if (safeAmount <= 0 || (bcvRate <= 0 && usdtRate <= 0)) {
+        if (bcvBarEl) bcvBarEl.style.width = "0%";
+        if (usdtBaseBarEl) usdtBaseBarEl.style.width = "0%";
+        if (usdtGapBarEl) usdtGapBarEl.style.width = "0%";
+      } else if (usdtRate >= bcvRate && usdtRate > 0) {
+        const bcvPct = Math.max(0, Math.min(100, (bcvRate / usdtRate) * 100));
+        const gapPct = Math.max(0, 100 - bcvPct);
+        if (bcvBarEl) bcvBarEl.style.width = `${bcvPct.toFixed(2)}%`;
+        if (usdtBaseBarEl) usdtBaseBarEl.style.width = `${bcvPct.toFixed(2)}%`;
+        if (usdtGapBarEl) usdtGapBarEl.style.width = `${gapPct.toFixed(2)}%`;
+      } else {
+        const usdtPct =
+          bcvRate > 0 ? Math.max(0, Math.min(100, (usdtRate / bcvRate) * 100)) : 0;
+        if (bcvBarEl) bcvBarEl.style.width = "100%";
+        if (usdtBaseBarEl) usdtBaseBarEl.style.width = `${usdtPct.toFixed(2)}%`;
+        if (usdtGapBarEl) usdtGapBarEl.style.width = "0%";
+      }
+
+      for (const btn of presetBtns) {
+        const presetVal = Number(btn.dataset.brechaPreset ?? "0");
+        const isActive = Math.abs(safeAmount - presetVal) < 0.0001;
+        btn.classList.toggle("is-active", isActive);
+        btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+      }
+
+      if (syncInput && input) {
+        input.value = String(safeAmount);
+      }
+    };
+
+    for (const btn of presetBtns) {
+      btn.addEventListener("click", () => {
+        const val = Number(btn.dataset.brechaPreset ?? "100");
+        applyAmount(val, true);
+      });
+    }
+
+    if (input) {
+      input.addEventListener("input", () => {
+        const parsed = Number.parseFloat(input.value);
+        const amount = Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+        applyAmount(amount, false);
+      });
+    }
   });
 </script>

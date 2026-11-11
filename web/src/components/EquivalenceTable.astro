@@ -1,7 +1,9 @@
 ---
+import { calculateBrecha } from "@/lib/rates/brecha";
 import { convertAmount } from "@/lib/rates/calculator";
 import { formatCurrency, formatNumber, getCurrencyDisplaySuffix } from "@/lib/rates/format";
 import type { ResolvedRate } from "@/lib/rates/types";
+import UnfoldMore from "./icons/UnfoldMore.astro";
 
 interface Props {
   id?: string;
@@ -9,6 +11,7 @@ interface Props {
   rates?: ResolvedRate[];
   focusRate?: ResolvedRate | null;
   amounts?: number[];
+  showBrechaUsd?: boolean;
 }
 
 const {
@@ -16,7 +19,8 @@ const {
   caption,
   rates = [],
   focusRate = null,
-  amounts = [1, 5, 10, 20, 50, 100, 500, 1000],
+  amounts = [1, 5, 10, 20, 50, 100, 500],
+  showBrechaUsd = false,
 } = Astro.props;
 
 const usdBcv = rates.find((r) => r.currencyId === 1) ?? null;
@@ -24,24 +28,43 @@ const eurBcv = rates.find((r) => r.currencyId === 2) ?? null;
 const usdtSell = rates.find((r) => r.currencyId === 3) ?? null;
 
 const isSingleMode = Boolean(focusRate);
-const columns = isSingleMode && focusRate
-  ? [
-      `Monto (${getCurrencyDisplaySuffix(focusRate)})`,
-      "Equivalente en Bolívares",
-      ...(focusRate.hasNextRate && focusRate.nextRate !== null
-        ? ["Con próxima tasa BCV"]
-        : []),
-    ]
-  : [
-      "Monto",
-      ...(usdBcv ? ["Dólar BCV (Bs)"] : []),
-      ...(eurBcv ? ["Euro BCV (Bs)"] : []),
-      ...(usdtSell ? ["USDT Venta (Bs)"] : []),
-    ];
+const isBrechaUsdMode = !isSingleMode && showBrechaUsd && Boolean(usdBcv && usdtSell);
+const hasBrechaCol = !isSingleMode && !isBrechaUsdMode && Boolean(usdBcv && usdtSell);
+
+const singleSuffix = focusRate ? getCurrencyDisplaySuffix(focusRate) : "$";
+
+const columns =
+  isSingleMode && focusRate
+    ? [
+        `Monto (${singleSuffix})`,
+        "Equivalente en Bolívares",
+        ...(focusRate.hasNextRate && focusRate.nextRate !== null
+          ? ["Con próxima tasa BCV"]
+          : []),
+      ]
+    : isBrechaUsdMode
+      ? ["Monto", "A Dólar BCV", "A USDT Binance", "Diferencia Bs", "Equiv. en $ BCV"]
+      : [
+          "Monto",
+          ...(usdBcv ? ["Dólar BCV"] : []),
+          ...(eurBcv ? ["Euro BCV"] : []),
+          ...(usdtSell ? ["USDT Venta"] : []),
+          ...(hasBrechaCol ? ["Brecha vs BCV"] : []),
+        ];
 
 const labelCssVars = columns
   .map((col, idx) => `--col-${idx + 1}: "${col.replace(/"/g, '\\"')}";`)
   .join(" ");
+
+const AMOUNT_CONTEXT_LABELS: Record<number, string> = {
+  1: "Referencia base",
+  5: "Monto menor",
+  10: "Pago común",
+  20: "Uso diario",
+  50: "Compra media",
+  100: "Más consultado",
+  500: "Monto alto",
+};
 
 const hasRows = isSingleMode
   ? Boolean(focusRate && focusRate.effectiveRate > 0)
@@ -51,76 +74,157 @@ const hasRows = isSingleMode
 <div class="eq-section">
   {
     hasRows ? (
-      <div
-        tabindex="0"
-        role="region"
-        aria-labelledby={id}
-        class="table-wrapper"
-        style={labelCssVars}
-      >
-        <table>
-          <caption id={id} class="table-caption">
-            {caption}
-          </caption>
-          <thead>
-            <tr>
-              {columns.map((col) => (
-                <th scope="col">{col}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {isSingleMode && focusRate ? (
-              amounts.map((amt) => {
-                const suffix = getCurrencyDisplaySuffix(focusRate);
-                const bsNow = convertAmount(amt, focusRate.effectiveRate, "foreignToBs");
-                const bsNext =
-                  focusRate.hasNextRate && focusRate.nextRate !== null
-                    ? convertAmount(amt, focusRate.nextRate, "foreignToBs")
-                    : null;
-                return (
-                  <tr>
-                    <th scope="row">
-                      {formatNumber(amt, { precision: 0 })} {suffix}
-                    </th>
-                    <td>{formatCurrency(bsNow, "Bs")}</td>
-                    {bsNext !== null && <td>{formatCurrency(bsNext, "Bs")}</td>}
-                  </tr>
-                );
-              })
-            ) : (
-              amounts.map((amt) => (
-                <tr>
-                  <th scope="row">{formatNumber(amt, { precision: 0 })} $ / €</th>
-                  {usdBcv && (
-                    <td>
-                      {formatCurrency(
-                        convertAmount(amt, usdBcv.effectiveRate, "foreignToBs"),
-                        "Bs",
+      <div class="table-tray">
+        <div
+          tabindex="0"
+          role="region"
+          aria-labelledby={id}
+          class="table-wrapper"
+          style={labelCssVars}
+        >
+          <table>
+            <caption id={id} class="table-caption">
+              {caption}
+            </caption>
+            <thead>
+              <tr>
+                {columns.map((col, idx) => (
+                  <th scope="col">
+                    {idx === 0 ? (
+                      <span class="th-sort-label">
+                        <span>{col}</span>
+                        <UnfoldMore size={13} class="th-sort-icon" />
+                      </span>
+                    ) : (
+                      col
+                    )}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {isSingleMode && focusRate ? (
+                amounts.map((amt) => {
+                  const isFeatured = amt === 100;
+                  const bsNow = convertAmount(amt, focusRate.effectiveRate, "foreignToBs");
+                  const bsNext =
+                    focusRate.hasNextRate && focusRate.nextRate !== null
+                      ? convertAmount(amt, focusRate.nextRate, "foreignToBs")
+                      : null;
+                  return (
+                    <tr class:list={[{ "is-featured-row": isFeatured }]}>
+                      <th scope="row">
+                        <span class="amount-cell">
+                          <span class="amount-value">
+                            {singleSuffix} {formatNumber(amt, { precision: 0 })}
+                          </span>
+                        </span>
+                      </th>
+                      <td>{formatCurrency(bsNow, "Bs")}</td>
+                      {bsNext !== null && <td>{formatCurrency(bsNext, "Bs")}</td>}
+                    </tr>
+                  );
+                })
+              ) : isBrechaUsdMode && usdBcv && usdtSell ? (
+                amounts.map((amt) => {
+                  const isFeatured = amt === 100;
+                  const brechaRow = calculateBrecha(
+                    usdBcv.effectiveRate,
+                    usdtSell.effectiveRate,
+                    amt,
+                  );
+                  const diffPrefix = brechaRow.impactBs > 0 ? "+" : "";
+                  const usdPrefix = brechaRow.impactUsdAtBcv > 0 ? "+" : "";
+                  return (
+                    <tr class:list={[{ "is-featured-row": isFeatured }]}>
+                      <th scope="row">
+                        <span class="amount-cell">
+                          <span class="amount-value">
+                            $ {formatNumber(amt, { precision: 0 })}
+                          </span>
+                          {isFeatured && <span class="freq-tag">FRECUENTE</span>}
+                        </span>
+                      </th>
+                      <td>{formatCurrency(brechaRow.bcvTotalBs, "Bs")}</td>
+                      <td>{formatCurrency(brechaRow.usdtTotalBs, "Bs")}</td>
+                      <td class="brecha-diff-cell">
+                        {diffPrefix}
+                        {formatCurrency(brechaRow.impactBs, "Bs")}
+                      </td>
+                      <td>
+                        <span class="brecha-badge">
+                          {usdPrefix}${formatNumber(brechaRow.impactUsdAtBcv)}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                amounts.map((amt) => {
+                  const isFeatured = amt === 100;
+                  const diffRate =
+                    hasBrechaCol && usdBcv && usdtSell
+                      ? usdtSell.effectiveRate - usdBcv.effectiveRate
+                      : 0;
+                  const brechaDiffBs =
+                    diffRate > 0
+                      ? convertAmount(amt, diffRate, "foreignToBs")
+                      : amt * diffRate;
+                  const brechaPrefix = brechaDiffBs > 0 ? "+" : "";
+                  const subLabel = AMOUNT_CONTEXT_LABELS[amt];
+
+                  return (
+                    <tr class:list={[{ "is-featured-row": isFeatured }]}>
+                      <th scope="row">
+                        <span class="amount-stack">
+                          <span class="amount-value">
+                            $ {formatNumber(amt, { precision: 0 })}
+                          </span>
+                          {subLabel && <span class="amount-sub">{subLabel}</span>}
+                        </span>
+                      </th>
+                      {usdBcv && (
+                        <td>
+                          {formatCurrency(
+                            convertAmount(amt, usdBcv.effectiveRate, "foreignToBs"),
+                            "Bs",
+                          )}
+                        </td>
                       )}
-                    </td>
-                  )}
-                  {eurBcv && (
-                    <td>
-                      {formatCurrency(
-                        convertAmount(amt, eurBcv.effectiveRate, "foreignToBs"),
-                        "Bs",
+                      {eurBcv && (
+                        <td class="muted-cell">
+                          {formatCurrency(
+                            convertAmount(amt, eurBcv.effectiveRate, "foreignToBs"),
+                            "Bs",
+                          )}
+                        </td>
                       )}
-                    </td>
-                  )}
-                  {usdtSell && (
-                    <td>
-                      {formatCurrency(
-                        convertAmount(amt, usdtSell.effectiveRate, "foreignToBs"),
-                        "Bs",
+                      {usdtSell && (
+                        <td>
+                          {formatCurrency(
+                            convertAmount(amt, usdtSell.effectiveRate, "foreignToBs"),
+                            "Bs",
+                          )}
+                        </td>
                       )}
-                    </td>
-                  )}
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                      {hasBrechaCol && (
+                        <td>
+                          <span class="brecha-badge">
+                            <span class="brecha-pill-dot" aria-hidden="true" />
+                            <span>
+                              {brechaPrefix}
+                              {formatCurrency(brechaDiffBs, "Bs")}
+                            </span>
+                          </span>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     ) : (
       <p class="table-empty">
@@ -136,52 +240,88 @@ const hasRows = isSingleMode
     container-type: inline-size;
   }
 
+  .table-tray {
+    background-color: var(--cr-tray);
+    border-radius: 1.375rem;
+    padding: 0.25rem;
+    border: 0;
+  }
+
   .table-wrapper {
-    overflow: auto;
+    overflow-x: auto;
+    overflow-y: hidden;
     max-inline-size: 100%;
-    max-block-size: min(520px, 75vh);
-    border: 1px solid var(--cr-border);
-    border-radius: 12px;
-    background-color: var(--cr-bg-secondary);
+    padding: 0 0.0625rem 0.1875rem;
+    border: 0;
+    border-radius: 1.125rem;
+    background: transparent;
   }
 
   table {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
-    font-size: 0.9375rem;
+    font-size: 0.875rem;
     font-variant-numeric: tabular-nums;
   }
 
   .table-caption {
-    padding: 0.875rem 1rem 0.625rem;
-    text-align: left;
-    font-size: 0.9375rem;
-    font-weight: 600;
-    color: var(--cr-text);
-    background-color: var(--cr-bg-secondary);
-    border-bottom: 1px solid var(--cr-border);
+    position: absolute;
+    clip-path: inset(50%);
+    overflow: hidden;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    white-space: nowrap;
   }
 
   thead {
-    position: sticky;
-    inset-block-start: 0;
-    z-index: 2;
-    background-color: var(--cr-bg-focus);
+    background: transparent;
+    border: 0;
   }
 
   th,
   td {
-    padding: 0.6875rem 1rem;
+    padding: 0.875rem 1rem;
     text-align: left;
-    border-bottom: 1px solid var(--cr-border);
+    border: 0;
     white-space: nowrap;
   }
 
   thead th {
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--cr-text-secondary);
+    position: relative;
+    padding: 0.625rem 1rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--cr-text-muted);
+    background: transparent;
+  }
+
+  thead th:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    inset-inline-end: 0;
+    top: 50%;
+    height: 0.9375rem;
+    width: 1px;
+    transform: translateY(-50%);
+    border-radius: 999px;
+    background-color: color-mix(in srgb, var(--cr-text) 12%, transparent);
+  }
+
+  .th-sort-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .th-sort-icon {
+    opacity: 0.8;
+    flex-shrink: 0;
   }
 
   thead th:not(:first-child),
@@ -189,13 +329,100 @@ const hasRows = isSingleMode
     text-align: right;
   }
 
+  tbody {
+    background: transparent;
+    filter: drop-shadow(0 2px 4px var(--cr-table-shadow-a))
+      drop-shadow(0 4px 8px var(--cr-table-shadow-b));
+  }
+
+  tbody tr {
+    background: transparent;
+  }
+
+  tbody th,
+  tbody td {
+    background-color: var(--cr-card-inner);
+    border-bottom: 1px solid var(--cr-table-divider);
+    transition: background-color 150ms ease;
+  }
+
+  tbody tr:last-child > th,
+  tbody tr:last-child > td {
+    border-bottom: 0;
+  }
+
+  tbody tr:hover > th,
+  tbody tr:hover > td {
+    background-color: var(--cr-surface-hover);
+  }
+
+  tbody tr:first-child > :first-child {
+    border-start-start-radius: 1rem;
+  }
+
+  tbody tr:first-child > :last-child {
+    border-start-end-radius: 1rem;
+  }
+
+  tbody tr:last-child > :first-child {
+    border-end-start-radius: 1rem;
+  }
+
+  tbody tr:last-child > :last-child {
+    border-end-end-radius: 1rem;
+  }
+
   tbody th {
     position: sticky;
     inset-inline-start: 0;
     z-index: 1;
-    background-color: var(--cr-bg-secondary);
-    font-weight: 600;
-    color: var(--cr-primary);
+    font-weight: 700;
+    color: var(--cr-text);
+  }
+
+  .amount-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  .amount-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    line-height: 1.25;
+  }
+
+  .amount-value {
+    font-weight: 700;
+    color: var(--cr-text);
+  }
+
+  .amount-sub {
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--cr-text-muted);
+    letter-spacing: 0;
+  }
+
+  tbody tr.is-featured-row .amount-value {
+    color: var(--cr-text);
+    font-weight: 800;
+    font-size: 0.9375rem;
+  }
+
+  .freq-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.4375rem;
+    border-radius: 0.375rem;
+    background-color: var(--cr-tray);
+    color: var(--cr-text-secondary);
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    line-height: 1.3;
   }
 
   tbody td {
@@ -203,27 +430,76 @@ const hasRows = isSingleMode
     font-weight: 500;
   }
 
-  tbody tr:last-child th,
-  tbody tr:last-child td {
-    border-bottom: 0;
+  tbody td.muted-cell {
+    color: var(--cr-text-secondary);
+  }
+
+  tbody td.brecha-diff-cell {
+    color: var(--cr-tint);
+    font-weight: 600;
+  }
+
+  tbody tr.is-featured-row td {
+    font-weight: 700;
+    color: var(--cr-text);
+  }
+
+  tbody tr.is-featured-row td.brecha-diff-cell {
+    color: var(--cr-tint);
+    font-weight: 800;
+  }
+
+  .brecha-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.2rem 0.625rem;
+    border-radius: 999px;
+    background-color: var(--cr-amber-bg);
+    color: var(--cr-tint);
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+
+  .brecha-pill-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--cr-amber-bar);
+    flex-shrink: 0;
   }
 
   .table-empty {
     margin: 0;
-    padding: 1rem;
-    border: 1px solid var(--cr-border);
-    border-radius: 12px;
-    background-color: var(--cr-bg-secondary);
+    padding: 1rem 1.25rem;
+    border: 0;
+    border-radius: 1rem;
+    background-color: var(--cr-surface);
+    box-shadow: var(--cr-shadow);
     color: var(--cr-text-secondary);
     font-size: 0.875rem;
   }
 
+  @media (prefers-reduced-motion: reduce) {
+    tbody th,
+    tbody td {
+      transition: none;
+    }
+  }
+
   @container (width < 520px) {
+    .table-tray {
+      background: transparent;
+      border-radius: 0;
+      padding: 0;
+    }
+
     .table-wrapper {
       border: 0;
       border-radius: 0;
+      padding: 0;
       background: transparent;
-      max-block-size: none;
       overflow: visible;
     }
 
@@ -238,58 +514,80 @@ const hasRows = isSingleMode
     }
 
     table,
-    caption,
     tbody,
     tr,
     tbody th {
       inline-size: 100%;
     }
 
-    .table-caption {
-      border: 0;
-      padding: 0 0 0.75rem;
-      background: transparent;
-      font-size: 0.9rem;
-      line-height: 1.45;
-      color: var(--cr-text-secondary);
-      text-wrap: pretty;
-    }
-
     thead {
       display: none;
     }
 
+    tbody {
+      background: transparent;
+      filter: none;
+      border-radius: 0;
+    }
+
     tbody tr {
       margin-block-end: 0.75rem;
-      border: 1px solid var(--cr-border);
-      border-radius: 10px;
+      border: 0;
+      border-radius: 0.875rem;
       overflow: hidden;
-      background-color: var(--cr-bg-secondary);
+      background-color: var(--cr-surface);
+      box-shadow: var(--cr-shadow);
+    }
+
+    tbody th,
+    tbody td {
+      background-color: transparent;
+      border-bottom: 0;
+    }
+
+    tbody tr:hover > th,
+    tbody tr:hover > td {
+      background-color: transparent;
     }
 
     tbody tr:last-child {
       margin-block-end: 0;
     }
 
+    tbody tr:first-child > :first-child,
+    tbody tr:first-child > :last-child,
+    tbody tr:last-child > :first-child,
+    tbody tr:last-child > :last-child {
+      border-radius: 0;
+    }
+
     tbody th {
       position: static;
       inset-inline-start: auto;
       inset-block-start: auto;
-      padding: 0.625rem 0.875rem;
-      background-color: var(--cr-bg-focus);
-      border-bottom: 1px solid var(--cr-border);
+      padding: 0.75rem 1rem;
+      background-color: var(--cr-tray);
+      border-bottom: 1px solid var(--cr-table-divider);
+    }
+
+    tbody tr:hover > th {
+      background-color: var(--cr-tray);
     }
 
     tbody td {
       display: flex;
       flex-wrap: wrap;
       justify-content: space-between;
-      align-items: baseline;
+      align-items: center;
       gap: 0.25rem 0.75rem;
-      padding: 0.5625rem 0.875rem;
+      padding: 0.625rem 1rem;
       text-align: right;
       white-space: nowrap;
-      border-bottom: 1px solid var(--cr-border);
+      border-bottom: 1px solid var(--cr-table-divider);
+    }
+
+    tbody tr td:last-child {
+      border-bottom: 0;
     }
 
     tbody td::before {
@@ -312,8 +610,29 @@ const hasRows = isSingleMode
       content: var(--col-4) ": ";
     }
 
-    tbody tr td:last-child {
-      border-bottom: 0;
+    tbody td:nth-child(5)::before {
+      content: var(--col-5) ": ";
+    }
+  }
+
+  @media (forced-colors: active) {
+    .table-tray,
+    tbody,
+    tbody tr,
+    .table-empty,
+    .brecha-badge,
+    .freq-tag {
+      border: 1px solid ButtonBorder;
+    }
+
+    thead th,
+    tbody th,
+    tbody td {
+      border-bottom: 1px solid ButtonBorder;
+    }
+
+    .brecha-pill-dot {
+      background-color: ButtonText;
     }
   }
 </style>

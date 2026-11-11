@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { resolveEffectiveRate } from "./bcv-validity";
 import { parseCaracasInput } from "./caracas-date";
@@ -17,12 +19,67 @@ export interface RatesSnapshotResult {
   error?: string;
 }
 
+let cachedDotenvVars: Record<string, string> | null = null;
+
+function readMonorepoDotenvFallback(): Record<string, string> {
+  if (cachedDotenvVars) return cachedDotenvVars;
+  const loaded: Record<string, string> = {};
+  try {
+    if (
+      typeof process === "undefined" ||
+      typeof process.versions?.node !== "string" ||
+      process.env.VITEST
+    ) {
+      cachedDotenvVars = loaded;
+      return loaded;
+    }
+
+    const cwd = process.cwd();
+    const candidates = [
+      path.join(cwd, ".env.local"),
+      path.join(cwd, ".env"),
+      path.resolve(cwd, "..", ".env.local"),
+      path.resolve(cwd, "..", ".env"),
+    ];
+    for (const filePath of candidates) {
+      if (!fs.existsSync(filePath)) continue;
+      const raw = fs.readFileSync(filePath, "utf-8");
+      for (const line of raw.split(/\r?\n/)) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#")) continue;
+        const eqIdx = trimmed.indexOf("=");
+        if (eqIdx <= 0) continue;
+        const k = trimmed.slice(0, eqIdx).trim();
+        let v = trimmed.slice(eqIdx + 1).trim();
+        if (
+          (v.startsWith('"') && v.endsWith('"')) ||
+          (v.startsWith("'") && v.endsWith("'"))
+        ) {
+          v = v.slice(1, -1);
+        }
+        if (!loaded[k] && v.length > 0) {
+          loaded[k] = v;
+        }
+      }
+    }
+  } catch {
+    // Non-Node or restricted FS environment: rely strictly on runtime env vars
+  }
+  cachedDotenvVars = loaded;
+  return loaded;
+}
+
 function readEnvVar(keys: string[]): string | undefined {
   const metaEnv = (
     import.meta as unknown as { env?: Record<string, string | undefined> }
   ).env;
   for (const key of keys) {
     const val = metaEnv?.[key] ?? process.env[key];
+    if (val && val.trim().length > 0) return val.trim();
+  }
+  const fallback = readMonorepoDotenvFallback();
+  for (const key of keys) {
+    const val = fallback[key];
     if (val && val.trim().length > 0) return val.trim();
   }
   return undefined;

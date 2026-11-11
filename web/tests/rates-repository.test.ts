@@ -4,6 +4,7 @@ import {
   aggregateDailyHistory,
   fetchPaginatedHistory,
   fetchRatesHistory,
+  fillMissingDailyRates,
   type HistoryPageFetcher,
 } from "@/lib/rates/history";
 import type { RawRateRow } from "@/lib/rates/types";
@@ -161,7 +162,58 @@ describe("fetchPaginatedHistory", () => {
   });
 });
 
-describe("fetchRatesHistory", () => {
+describe("fillMissingDailyRates & fetchRatesHistory", () => {
+  it("fills weekend and holiday gaps by carrying forward the previous active rate", () => {
+    const filled = fillMissingDailyRates(
+      [
+        { date: "2026-11-06", rate: 896.12 },
+        { date: "2026-11-09", rate: 897.54 },
+      ],
+      "2026-11-06",
+      "2026-11-10",
+    );
+
+    expect(filled).toEqual([
+      { date: "2026-11-06", rate: 896.12 },
+      { date: "2026-11-07", rate: 896.12 },
+      { date: "2026-11-08", rate: 896.12 },
+      { date: "2026-11-09", rate: 897.54 },
+      { date: "2026-11-10", rate: 897.54 },
+    ]);
+  });
+
+  it("looks back before day 0 when the requested window starts on a weekend or holiday", async () => {
+    const fetcher: HistoryPageFetcher = vi.fn(async ({ startIso, endIso, from }) => {
+      if (from > 0) return { data: [], error: null };
+      if (startIso === "2026-11-07T00:00:00" && endIso === "2026-11-09T23:59:59") {
+        // Window is Sat..Mon: only Monday has a direct row
+        return {
+          data: [{ date: "2026-11-09T00:00:00", rate: 897.54 }],
+          error: null,
+        };
+      }
+      // Lookback query [2026-10-24 .. 2026-11-06] finds Friday's active BCV rate
+      return {
+        data: [{ date: "2026-11-06T00:00:00", rate: 896.12 }],
+        error: null,
+      };
+    });
+
+    const result = await fetchRatesHistory(
+      [1],
+      3,
+      fetcher,
+      new Date("2026-11-09T12:00:00-04:00"),
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.series[1]).toEqual([
+      { date: "2026-11-07", rate: 896.12 },
+      { date: "2026-11-08", rate: 896.12 },
+      { date: "2026-11-09", rate: 897.54 },
+    ]);
+  });
+
   it("degrades gracefully without throwing when exchange_rates returns a permission or network error", async () => {
     const brokenFetcher: HistoryPageFetcher = vi.fn(async () => ({
       data: null,
