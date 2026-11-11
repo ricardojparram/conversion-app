@@ -1,3 +1,11 @@
+# Cambio rápido
+
+Monorepo de **Cambio rápido** (app móvil Expo en la raíz y aplicación web SSR/ISR en [`web/`](./web/README.md)).
+
+> **Aplicación web y seguridad (Astro + Vercel + CSP):** revisá [`web/README.md`](./web/README.md).
+
+---
+
 # Welcome to your Expo app 👋
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).

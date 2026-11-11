@@ -52,6 +52,11 @@ export default defineConfig({
   site: siteUrl,
   output: "static",
   trailingSlash: "never",
+  build: {
+    // Emit every stylesheet as an external /_astro/*.css asset so CSP
+    // style-src-elem 'self' never blocks auto-inlined small page styles.
+    inlineStylesheets: "never",
+  },
   adapter: vercel({
     includeFiles: [
       "src/assets/fonts/Poppins_400Regular.ttf",
@@ -69,6 +74,14 @@ export default defineConfig({
     // never walk up into the root Expo tsconfig.json (which extends expo/tsconfig.base).
     tsconfig: path.join(webDir, "tsconfig.json"),
     plugins: [tailwindcss()],
+    build: {
+      // Keep bundled component scripts external (/ _astro/*.js) so strict
+      // hash-based CSP never fails on small compiled module chunks.
+      assetsInlineLimit(filePath) {
+        if (/\.(?:mjs|js)(?:\?|$)/i.test(filePath)) return false;
+        return undefined;
+      },
+    },
     optimizeDeps: {
       exclude: ["@resvg/resvg-wasm"],
     },

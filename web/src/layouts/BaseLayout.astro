@@ -33,6 +33,7 @@ if (!Astro.isPrerendered && meta.robots.includes("noindex")) {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
+    {/* Inline pre-paint theme bootstrap: if edited, update its sha256 digest in web/vercel.json (verified by pnpm test). */}
     <script is:inline>
       try {
         var savedScheme = localStorage.getItem("color-scheme");
@@ -121,8 +122,10 @@ if (!Astro.isPrerendered && meta.robots.includes("noindex")) {
 
     <script>
       import { initLiveTimestamps } from "@/scripts/live-time";
+      import { initNavbar } from "@/scripts/navbar";
       import { initPwa } from "@/scripts/pwa";
       import { initThemeToggle } from "@/scripts/theme";
+      initNavbar();
       initThemeToggle();
       initPwa();
       initLiveTimestamps();

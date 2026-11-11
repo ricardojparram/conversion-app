@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -497,5 +498,109 @@ describe("routes, endpoints, and SEO/MWG structural contracts", () => {
 
     const astroConfig = fs.readFileSync(path.join(WEB_ROOT, "astro.config.mjs"), "utf-8");
     expect(astroConfig).toContain('tsconfig: path.join(webDir, "tsconfig.json")');
+    expect(astroConfig).toContain('inlineStylesheets: "never"');
+    expect(astroConfig).toContain("assetsInlineLimit");
+  });
+
+  it("enforces strict hash-based CSP, CORP rules, and keeps inline script digest synced with BaseLayout.astro", () => {
+    const layoutPath = path.join(SRC_DIR, "layouts", "BaseLayout.astro");
+    const layoutAstro = fs.readFileSync(layoutPath, "utf-8");
+    expect(layoutAstro).toContain("initNavbar");
+
+    const navbarAstro = fs.readFileSync(path.join(COMPONENTS_DIR, "Navbar.astro"), "utf-8");
+    expect(navbarAstro).not.toMatch(/<script\b/i);
+
+    const inlineThemeMatch = layoutAstro.match(/<script\s+is:inline>([\s\S]*?)<\/script>/);
+    expect(inlineThemeMatch, "BaseLayout.astro missing theme <script is:inline>").not.toBeNull();
+    const expectedHash = crypto
+      .createHash("sha256")
+      .update(inlineThemeMatch![1], "utf8")
+      .digest("base64");
+    const expectedHashToken = `'sha256-${expectedHash}'`;
+
+    // Ensure no unexpected inline executable scripts, inline <style is:inline>, inline event handlers, or javascript: URLs exist.
+    const allSrcFiles = collectFilesRecursive(SRC_DIR);
+    for (const file of allSrcFiles) {
+      const content = fs.readFileSync(file, "utf-8");
+      if (file.endsWith(".astro") || file.endsWith(".html")) {
+        expect(content, `Forbidden <style is:inline> in ${file}`).not.toMatch(
+          /<style\b[^>]*\bis:inline\b/i,
+        );
+        for (const match of content.matchAll(
+          /<script\b([^>]*?)(?:\/>|>([\s\S]*?)<\/script>)/gi,
+        )) {
+          const attrs = match[1] ?? "";
+          const isJsonLd = /type\s*=\s*["']application\/ld\+json["']/i.test(attrs);
+          const hasInlineAttr = /\bis:inline\b/i.test(attrs);
+          if (hasInlineAttr && !isJsonLd) {
+            expect(file, `Unexpected executable <script is:inline> in ${file}`).toBe(layoutPath);
+          }
+        }
+      }
+      expect(content, `Forbidden inline JS event attribute in ${file}`).not.toMatch(
+        /\s+on(?:click|load|error|mouseover|focus)\s*=\s*["']/i,
+      );
+      expect(content, `Forbidden javascript: URI in ${file}`).not.toMatch(/javascript:/i);
+    }
+
+    const vercelConfig = JSON.parse(
+      fs.readFileSync(path.join(WEB_ROOT, "vercel.json"), "utf-8"),
+    ) as {
+      headers: Array<{ source: string; headers: Array<{ key: string; value: string }> }>;
+    };
+
+    const rootIdx = vercelConfig.headers.findIndex((h) => h.source === "/(.*)");
+    const ogIdx = vercelConfig.headers.findIndex((h) => h.source === "/og/(.*)");
+    const publicMediaIdx = vercelConfig.headers.findIndex((h) =>
+      h.source.includes("og-image") && h.source.includes("icon-512"),
+    );
+
+    expect(rootIdx).toBeGreaterThanOrEqual(0);
+    expect(ogIdx).toBeGreaterThan(rootIdx);
+    expect(publicMediaIdx).toBeGreaterThan(rootIdx);
+
+    const rootHeaders = vercelConfig.headers[rootIdx].headers;
+    expect(rootHeaders).toContainEqual({
+      key: "Cross-Origin-Resource-Policy",
+      value: "same-origin",
+    });
+
+    const cspHeader = rootHeaders.find((h) => h.key === "Content-Security-Policy");
+    expect(cspHeader, "Missing Content-Security-Policy header rule").toBeDefined();
+
+    const directives = cspHeader!.value.split(";").map((d) => d.trim());
+    const scriptDirective = directives.find((d) => d.startsWith("script-src "));
+    expect(scriptDirective).toBeDefined();
+    expect(scriptDirective).toContain("'self'");
+    expect(scriptDirective).toContain(expectedHashToken);
+    expect(scriptDirective).toContain("'report-sample'");
+    expect(scriptDirective).not.toContain("'unsafe-inline'");
+    expect(scriptDirective).not.toContain("'unsafe-eval'");
+    expect(scriptDirective).not.toContain("'strict-dynamic'");
+
+    expect(directives).toContain("default-src 'self'");
+    expect(directives).toContain("script-src-attr 'none'");
+    expect(directives).toContain("style-src 'self' 'unsafe-inline'");
+    expect(directives).toContain("style-src-elem 'self'");
+    expect(directives).toContain("style-src-attr 'unsafe-inline'");
+    expect(directives).toContain("img-src 'self' data:");
+    expect(directives).toContain("font-src 'self'");
+    expect(directives).toContain("connect-src 'self'");
+    expect(directives).toContain("manifest-src 'self'");
+    expect(directives).toContain("worker-src 'self'");
+    expect(directives).toContain("object-src 'none'");
+    expect(directives).toContain("base-uri 'none'");
+    expect(directives).toContain("form-action 'self'");
+    expect(directives).toContain("frame-ancestors 'none'");
+    expect(directives).toContain("upgrade-insecure-requests");
+
+    expect(vercelConfig.headers[ogIdx].headers).toContainEqual({
+      key: "Cross-Origin-Resource-Policy",
+      value: "cross-origin",
+    });
+    expect(vercelConfig.headers[publicMediaIdx].headers).toContainEqual({
+      key: "Cross-Origin-Resource-Policy",
+      value: "cross-origin",
+    });
   });
 });
