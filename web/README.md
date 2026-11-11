@@ -58,7 +58,7 @@ Las cabeceras de seguridad se configuran en [`vercel.json`](./vercel.json) para 
 | --- | --- | --- |
 | `Content-Security-Policy` | `/(.*)` | Restringe qué scripts, estilos, fuentes, imágenes, workers (`sw.js`), peticiones (`fetch`), formularios y marcos (`iframe`) puede ejecutar o cargar el navegador. |
 | `Cross-Origin-Resource-Policy: same-origin` | `/(.*)` | Evita que sitios externos lean respuestas HTML, endpoints JSON (`/api/*`) o bundles `/_astro/*` mediante peticiones cross-origin. |
-| `Cross-Origin-Resource-Policy: cross-origin` | `/og/(.*)` y recursos públicos (`/og-image.png`, `/icon-192.png`, `/icon-512.png`, `/favicon.ico`, `/favicon.svg`) | Permite que WhatsApp, X, LinkedIn, Telegram y navegadores lean las tarjetas Open Graph e íconos públicos sin bloquear las vistas previas. |
+| `Cross-Origin-Resource-Policy: cross-origin` | `/og/(.*)` y recursos públicos (`/og-image.png`, `/apple-touch-icon.png`, `/icon-192.png`, `/icon-512.png`, `/icon-maskable-512.png`, `/favicon.ico`, `/favicon.svg`) | Permite que WhatsApp, X, LinkedIn, Telegram y navegadores lean las tarjetas Open Graph e íconos públicos sin bloquear las vistas previas. |
 | `Cross-Origin-Opener-Policy: same-origin-allow-popups` | `/(.*)` | Aísla el contexto `window.opener` frente a ventanas externas evitando ataques XS-Leaks. |
 | `X-Frame-Options: DENY` | `/(.*)` | Defensa complementaria contra clickjacking junto a `frame-ancestors 'none'`. |
 | `X-Content-Type-Options: nosniff` | `/(.*)` | Impide MIME-type sniffing en scripts, hojas de estilo y respuestas JSON. |

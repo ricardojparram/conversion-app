@@ -45,7 +45,7 @@
       ]
     },
     {
-      "source": "/(og-image\\.png|icon-192\\.png|icon-512\\.png|favicon\\.ico|favicon\\.svg)",
+      "source": "/((?:og-image|apple-touch-icon|icon-192|icon-512|icon-maskable-512)\\.png|favicon\\.ico|favicon\\.svg)",
       "headers": [
         { "key": "Cross-Origin-Resource-Policy", "value": "cross-origin" }
       ]

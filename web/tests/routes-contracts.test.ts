@@ -551,10 +551,15 @@ describe("routes, endpoints, and SEO/MWG structural contracts", () => {
 
     const rootIdx = vercelConfig.headers.findIndex((h) => h.source === "/(.*)");
     const ogIdx = vercelConfig.headers.findIndex((h) => h.source === "/og/(.*)");
-    const publicMediaIdx = vercelConfig.headers.findIndex((h) =>
-      h.source.includes("og-image") && h.source.includes("icon-512"),
+    const publicMediaIdx = vercelConfig.headers.findIndex(
+      (h) =>
+        h.source.includes("og-image") &&
+        h.source.includes("apple-touch-icon") &&
+        h.source.includes("icon-512") &&
+        h.source.includes("icon-maskable-512"),
     );
 
+    expect(layoutAstro).toContain('<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />');
     expect(rootIdx).toBeGreaterThanOrEqual(0);
     expect(ogIdx).toBeGreaterThan(rootIdx);
     expect(publicMediaIdx).toBeGreaterThan(rootIdx);

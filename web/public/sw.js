@@ -1,6 +1,6 @@
-const SHELL_CACHE = "cr-shell-v2";
-const STATIC_CACHE = "cr-static-v2";
-const API_CACHE = "cr-api-v2";
+const SHELL_CACHE = "cr-shell-v3";
+const STATIC_CACHE = "cr-static-v3";
+const API_CACHE = "cr-api-v3";
 const ACTIVE_CACHES = new Set([SHELL_CACHE, STATIC_CACHE, API_CACHE]);
 const MAX_STATIC_ENTRIES = 60;
 
@@ -8,8 +8,10 @@ const PRECACHE_URLS = [
   "/",
   "/manifest.json",
   "/favicon.svg",
+  "/apple-touch-icon.png",
   "/icon-192.png",
   "/icon-512.png",
+  "/icon-maskable-512.png",
   "/favicon.ico",
 ];
 
@@ -136,6 +138,8 @@ self.addEventListener("fetch", (event) => {
   if (
     url.pathname === "/manifest.json" ||
     url.pathname === "/favicon.ico" ||
+    url.pathname === "/favicon.svg" ||
+    url.pathname === "/apple-touch-icon.png" ||
     url.pathname.startsWith("/icon-") ||
     ["style", "script", "image"].includes(request.destination)
   ) {
