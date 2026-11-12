@@ -55,7 +55,7 @@ describe("web project scaffold", () => {
     expect(manifest.id).toBe("/");
     expect(manifest.start_url).toBe("/");
     expect(manifest.display).toBe("standalone");
-    expect(manifest.theme_color).toBe("#e8edf4");
+    expect(manifest.theme_color).toBeUndefined();
     expect(manifest.background_color).toBe("#e8edf4");
     expect(manifest.lang).toBe("es-VE");
     expect(manifest.icons).toContainEqual({
