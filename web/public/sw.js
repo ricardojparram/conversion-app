@@ -1,6 +1,6 @@
-const SHELL_CACHE = "cr-shell-v3";
-const STATIC_CACHE = "cr-static-v3";
-const API_CACHE = "cr-api-v3";
+const SHELL_CACHE = "cr-shell-v4";
+const STATIC_CACHE = "cr-static-v4";
+const API_CACHE = "cr-api-v4";
 const ACTIVE_CACHES = new Set([SHELL_CACHE, STATIC_CACHE, API_CACHE]);
 const MAX_STATIC_ENTRIES = 60;
 

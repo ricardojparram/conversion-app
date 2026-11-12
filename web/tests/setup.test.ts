@@ -40,6 +40,15 @@ describe("web project scaffold", () => {
       height: 512,
     });
 
+    const faviconSvg = fs.readFileSync(path.join(publicDir, "favicon.svg"), "utf-8");
+    expect(faviconSvg).toContain('fill="#16a249"');
+    expect(faviconSvg).toContain('stroke="#095625"');
+
+    const icoHeader = fs.readFileSync(path.join(publicDir, "favicon.ico"));
+    expect(icoHeader.readUInt16LE(0)).toBe(0);
+    expect(icoHeader.readUInt16LE(2)).toBe(1);
+    expect(icoHeader.readUInt16LE(4)).toBeGreaterThanOrEqual(3);
+
     const manifest = JSON.parse(
       fs.readFileSync(path.join(publicDir, "manifest.json"), "utf-8"),
     );
