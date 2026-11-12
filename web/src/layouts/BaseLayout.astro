@@ -12,6 +12,7 @@ import type { PageMeta } from "@/lib/seo/meta";
 import { getGoogleSiteVerification, SITE_NAME } from "@/lib/seo/config";
 import Navbar from "@/components/Navbar.astro";
 import Footer from "@/components/Footer.astro";
+import PwaInstallPrompt from "@/components/PwaInstallPrompt.astro";
 
 interface Props {
   meta: PageMeta;
@@ -31,7 +32,10 @@ if (!Astro.isPrerendered && meta.robots.includes("noindex")) {
 <html lang="es-VE">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
     <meta name="color-scheme" content="light dark" />
     <meta
       name="theme-color"
@@ -127,6 +131,8 @@ if (!Astro.isPrerendered && meta.robots.includes("noindex")) {
     </main>
 
     <Footer />
+
+    <PwaInstallPrompt />
 
     <div
       id="app-live-region"

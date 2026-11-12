@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  PWA_INSTALL_DISMISS_COOLDOWN_MS,
+  isInstallBannerDismissed,
   isIosSafariInstallEligible,
   isRunningStandalonePwa,
+  shouldShowInstallBanner,
 } from "@/scripts/pwa";
 
 describe("PWA eligibility helpers", () => {
@@ -26,5 +29,71 @@ describe("PWA eligibility helpers", () => {
     expect(isIosSafariInstallEligible(iphoneChrome, 5, false)).toBe(false);
     expect(isIosSafariInstallEligible(ipadDesktopMode, 5, false)).toBe(true);
     expect(isIosSafariInstallEligible(desktopChrome, 0, false)).toBe(false);
+  });
+
+  it("respects 7-day dismissal cooldown and rejects malformed timestamps", () => {
+    const now = 1_700_000_000_000;
+    expect(isInstallBannerDismissed(null, now)).toBe(false);
+    expect(isInstallBannerDismissed("", now)).toBe(false);
+    expect(isInstallBannerDismissed("not-a-number", now)).toBe(false);
+    expect(isInstallBannerDismissed("0", now)).toBe(false);
+
+    // Dismissed 1 hour ago -> still within cooldown
+    expect(isInstallBannerDismissed(String(now - 3_600_000), now)).toBe(true);
+
+    // Dismissed right at cooldown expiry -> eligible again
+    expect(
+      isInstallBannerDismissed(String(now - PWA_INSTALL_DISMISS_COOLDOWN_MS), now),
+    ).toBe(false);
+
+    // Future clock skew -> treated as expired
+    expect(isInstallBannerDismissed(String(now + 60_000), now)).toBe(false);
+  });
+
+  it("reveals install banner only when installable, non-standalone, undismissed, and no modal dialog is open", () => {
+    expect(
+      shouldShowInstallBanner({
+        isStandalone: false,
+        canInstall: true,
+        isDismissed: false,
+        hasOpenModalDialog: false,
+      }),
+    ).toBe(true);
+
+    expect(
+      shouldShowInstallBanner({
+        isStandalone: true,
+        canInstall: true,
+        isDismissed: false,
+        hasOpenModalDialog: false,
+      }),
+    ).toBe(false);
+
+    expect(
+      shouldShowInstallBanner({
+        isStandalone: false,
+        canInstall: false,
+        isDismissed: false,
+        hasOpenModalDialog: false,
+      }),
+    ).toBe(false);
+
+    expect(
+      shouldShowInstallBanner({
+        isStandalone: false,
+        canInstall: true,
+        isDismissed: true,
+        hasOpenModalDialog: false,
+      }),
+    ).toBe(false);
+
+    expect(
+      shouldShowInstallBanner({
+        isStandalone: false,
+        canInstall: true,
+        isDismissed: false,
+        hasOpenModalDialog: true,
+      }),
+    ).toBe(false);
   });
 });
