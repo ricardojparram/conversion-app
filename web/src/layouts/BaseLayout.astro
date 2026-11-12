@@ -33,6 +33,18 @@ if (!Astro.isPrerendered && meta.robots.includes("noindex")) {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
+    <meta
+      name="theme-color"
+      data-theme-color="light"
+      media="(prefers-color-scheme: light)"
+      content="#e8edf4"
+    />
+    <meta
+      name="theme-color"
+      data-theme-color="dark"
+      media="(prefers-color-scheme: dark)"
+      content="#080f17"
+    />
     {/* Inline pre-paint theme bootstrap: if edited, update its sha256 digest in web/vercel.json (verified by pnpm test). */}
     <script is:inline>
       try {
@@ -40,6 +52,10 @@ if (!Astro.isPrerendered && meta.robots.includes("noindex")) {
         if (savedScheme === "light" || savedScheme === "dark") {
           var metaEl = document.querySelector('meta[name="color-scheme"]');
           if (metaEl) metaEl.setAttribute("content", savedScheme);
+          var tc = savedScheme === "dark" ? "#080f17" : "#e8edf4";
+          document.querySelectorAll('meta[name="theme-color"]').forEach(function (el) {
+            el.setAttribute("content", tc);
+          });
         }
       } catch (_err) {}
     </script>
@@ -85,7 +101,6 @@ if (!Astro.isPrerendered && meta.robots.includes("noindex")) {
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <meta name="theme-color" content="#16a249" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content={SITE_NAME} />

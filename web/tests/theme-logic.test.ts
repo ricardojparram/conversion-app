@@ -3,6 +3,7 @@ import {
   computeNextColorScheme,
   normalizeStoredColorScheme,
   resolveRenderedScheme,
+  syncThemeColorMeta,
 } from "@/scripts/theme";
 
 describe("dark-mode-toggle tri-state logic", () => {
@@ -46,5 +47,36 @@ describe("dark-mode-toggle tri-state logic", () => {
       stored: "light",
       metaContent: "light",
     });
+  });
+
+  it("syncs light and dark theme-color meta tags with scheme overrides and system mode", () => {
+    const createMeta = (slot: "light" | "dark") => {
+      const attrs = new Map<string, string>([
+        ["data-theme-color", slot],
+        ["content", slot === "dark" ? "#080f17" : "#e8edf4"],
+      ]);
+      return {
+        getAttribute: (name: string) => attrs.get(name) ?? null,
+        setAttribute: (name: string, value: string) => attrs.set(name, value),
+      } as unknown as HTMLMetaElement;
+    };
+
+    const lightMeta = createMeta("light");
+    const darkMeta = createMeta("dark");
+    const fakeDoc = {
+      querySelectorAll: () => [lightMeta, darkMeta],
+    } as unknown as Pick<Document, "querySelectorAll">;
+
+    syncThemeColorMeta(fakeDoc, "dark");
+    expect(lightMeta.getAttribute("content")).toBe("#080f17");
+    expect(darkMeta.getAttribute("content")).toBe("#080f17");
+
+    syncThemeColorMeta(fakeDoc, "light");
+    expect(lightMeta.getAttribute("content")).toBe("#e8edf4");
+    expect(darkMeta.getAttribute("content")).toBe("#e8edf4");
+
+    syncThemeColorMeta(fakeDoc, "light dark");
+    expect(lightMeta.getAttribute("content")).toBe("#e8edf4");
+    expect(darkMeta.getAttribute("content")).toBe("#080f17");
   });
 });

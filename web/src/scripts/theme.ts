@@ -39,12 +39,39 @@ export function computeNextColorScheme(
   return { stored: target, metaContent: target };
 }
 
+const THEME_COLOR_LIGHT = "#e8edf4";
+const THEME_COLOR_DARK = "#080f17";
+
+export function syncThemeColorMeta(
+  doc: Pick<Document, "querySelectorAll">,
+  metaContent: string | null | undefined,
+): void {
+  const metas = doc.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]');
+  metas.forEach((el) => {
+    if (metaContent === "dark") {
+      el.setAttribute("content", THEME_COLOR_DARK);
+    } else if (metaContent === "light") {
+      el.setAttribute("content", THEME_COLOR_LIGHT);
+    } else {
+      const slot = el.getAttribute("data-theme-color");
+      el.setAttribute(
+        "content",
+        slot === "dark" ? THEME_COLOR_DARK : THEME_COLOR_LIGHT,
+      );
+    }
+  });
+}
+
 export function initThemeToggle(): void {
   if (typeof document === "undefined" || typeof window === "undefined") return;
 
   const meta = document.querySelector<HTMLMetaElement>('meta[name="color-scheme"]');
+  if (!meta) return;
+
+  syncThemeColorMeta(document, meta.getAttribute("content"));
+
   const toggleBtns = document.querySelectorAll<HTMLButtonElement>("[data-theme-toggle]");
-  if (!meta || toggleBtns.length === 0) return;
+  if (toggleBtns.length === 0) return;
 
   const mq = window.matchMedia("(prefers-color-scheme: dark)");
 
@@ -62,6 +89,7 @@ export function initThemeToggle(): void {
 
   const applyMeta = (content: ColorSchemePreference) => {
     meta.setAttribute("content", content);
+    syncThemeColorMeta(document, content);
     syncAriaState(content);
   };
 

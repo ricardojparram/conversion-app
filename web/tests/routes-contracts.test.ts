@@ -560,6 +560,14 @@ describe("routes, endpoints, and SEO/MWG structural contracts", () => {
     );
 
     expect(layoutAstro).toContain('<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />');
+    expect(layoutAstro).toContain('data-theme-color="light"');
+    expect(layoutAstro).toContain('content="#e8edf4"');
+    expect(layoutAstro).toContain('data-theme-color="dark"');
+    expect(layoutAstro).toContain('content="#080f17"');
+    expect(layoutAstro).not.toContain('name="theme-color" content="#16a249"');
+    expect(layoutAstro.indexOf('data-theme-color="dark"')).toBeLessThan(
+      layoutAstro.indexOf("<script is:inline>"),
+    );
     expect(rootIdx).toBeGreaterThanOrEqual(0);
     expect(ogIdx).toBeGreaterThan(rootIdx);
     expect(publicMediaIdx).toBeGreaterThan(rootIdx);
