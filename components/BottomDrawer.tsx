@@ -28,13 +28,13 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
 
   const [
     bgColor,
-    borderColor,
+    trayColor,
     textPrimaryColor,
     textSecondaryColor,
     bgSecondaryColor,
   ] = useThemeColor(
     "background",
-    "border",
+    "tray",
     "text",
     "textSecondary",
     "backgroundSecondary"
@@ -66,7 +66,7 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
           useNativeDriver: true,
         }),
         Animated.timing(backdropOpacity, {
-          toValue: 0.5,
+          toValue: 0.55,
           duration: 280,
           useNativeDriver: true,
         }),
@@ -152,7 +152,7 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
           style={[
             StyleSheet.absoluteFill,
             {
-              backgroundColor: "#000000",
+              backgroundColor: "#080f17",
               opacity: backdropOpacity,
             },
           ]}
@@ -167,27 +167,26 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
               styles.desktopBox,
               {
                 backgroundColor: bgSecondaryColor,
-                borderColor,
                 transform: [{ translateY }],
               },
             ]}
           >
-            <View style={[styles.modalHeader, { borderBottomWidth: 1, borderBottomColor: borderColor }]}>
+            <View style={styles.modalHeader}>
               <Typography type="subtitle" style={{ flex: 1, fontSize: 18, color: textPrimaryColor }}>
                 {title}
               </Typography>
               <Pressable
                 onPress={handleClose}
                 style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 14,
-                  backgroundColor: borderColor,
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  backgroundColor: trayColor,
                   justifyContent: "center",
                   alignItems: "center",
                 }}
               >
-                <Typography type="md" style={{ color: textSecondaryColor, fontSize: 12, fontFamily: "Poppins_600SemiBold", textAlign: "center" }}>✕</Typography>
+                <Typography type="md" style={{ color: textSecondaryColor, fontSize: 13, fontFamily: "Poppins_600SemiBold", textAlign: "center" }}>✕</Typography>
               </Pressable>
             </View>
             <View style={[styles.content, { flex: 1 }]}>
@@ -205,19 +204,19 @@ export function BottomDrawer({ visible, onClose, title, children }: BottomDrawer
                 backgroundColor: bgColor,
                 transform: [{ translateY }],
                 paddingBottom: Math.max(insets.bottom, 24),
-                minHeight: screenHeight * 0.85,
-                maxHeight: screenHeight * 0.95,
+                minHeight: screenHeight * 0.65,
+                maxHeight: screenHeight * 0.9,
               },
             ]}
           >
             {/* Drag Handle & Header (Gesture Responder area) */}
             <View {...panResponder.panHandlers} style={styles.gestureHeader}>
-              <View style={[styles.dragHandle, { backgroundColor: borderColor }]} />
+              <View style={[styles.dragHandle, { backgroundColor: trayColor }]} />
               <Typography
                 type="subtitle"
                 style={{
                   fontSize: 18,
-                  fontFamily: "Poppins_600SemiBold",
+                  fontFamily: "Poppins_700Bold",
                   color: textPrimaryColor,
                   textAlign: "center",
                   marginTop: 4,
@@ -258,16 +257,16 @@ const styles = StyleSheet.create({
   desktopBox: {
     width: 440,
     maxHeight: "85%",
-    borderRadius: 16,
-    borderWidth: 1,
+    borderRadius: 20,
+    borderWidth: 0,
     paddingHorizontal: 24,
-    paddingTop: 16,
+    paddingTop: 18,
     paddingBottom: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 5,
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    elevation: 10,
     flexShrink: 1,
   },
   mobileDrawer: {

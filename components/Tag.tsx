@@ -1,7 +1,7 @@
-import { ViewProps } from "react-native-svg/lib/typescript/fabric/utils";
-import { Div } from "./Div";
-import { StyleSheet, Text } from "react-native";
+import type { ViewProps } from "react-native";
+import { View } from "react-native";
 import { useThemeColor } from "@/hooks/useThemeColor";
+import { useColorScheme } from "@/hooks/useColorScheme";
 import { Typography } from "./Typography";
 
 export const Tag = ({
@@ -10,49 +10,65 @@ export const Tag = ({
   style,
   ...props
 }: ViewProps & { variant?: "default" | "success" | "error" }) => {
-  const [textSecondaryColor, bgColor, borderColor, iconColor] = useThemeColor(
-    "textSecondary",
-    "backgroundSecondary",
-    "border",
-    "icon"
-  );
+  const isDark = (useColorScheme() ?? "light") === "dark";
+  const [textSecondaryColor, surfaceColor, primaryColor, dangerColor] =
+    useThemeColor("textSecondary", "surface", "primary", "danger");
+
   const variants = {
     default: {
-      backgroundColor: bgColor,
-      borderColor: borderColor,
+      backgroundColor: surfaceColor,
       textColor: textSecondaryColor,
     },
     success: {
-      backgroundColor: iconColor,
-      borderColor: "green",
-      textColor: "white",
+      backgroundColor: primaryColor,
+      textColor: "#ffffff",
     },
     error: {
-      backgroundColor: "#e00000",
-      borderColor: "#a00000",
-      textColor: "white",
+      backgroundColor: dangerColor,
+      textColor: "#ffffff",
     },
   };
+
   return (
-    <Div
-      className={`tag tag-${variant}`}
-      style={{
-        paddingHorizontal: 18,
-        paddingVertical: 8,
-        borderRadius: 20,
-        borderWidth: 2,
-        boxShadow: "1px 4px 10px rgba(0, 0, 0, 0.2)",
-        ...variants[variant],
-        ...(typeof style === "object" && style !== null ? style : {}),
-      }}
+    <View
+      style={[
+        {
+          paddingHorizontal: 18,
+          paddingVertical: 8,
+          borderRadius: 999,
+          borderWidth: 0,
+          backgroundColor: variants[variant].backgroundColor,
+          ...(isDark
+            ? {
+                shadowColor: "#000000",
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.5,
+                shadowRadius: 20,
+                elevation: 8,
+              }
+            : {
+                shadowColor: "#0f172a",
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.18,
+                shadowRadius: 20,
+                elevation: 8,
+              }),
+        },
+        style,
+      ]}
       {...props}
     >
       <Typography
         type="defaultSemiBold"
-        style={{ color: variants[variant].textColor }}
+        style={{
+          color: variants[variant].textColor,
+          fontSize: 14,
+          lineHeight: 20,
+          textAlign: "center",
+        }}
       >
         {children}
       </Typography>
-    </Div>
+    </View>
   );
 };

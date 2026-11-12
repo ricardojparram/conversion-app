@@ -1,34 +1,28 @@
-import { TextInput, Text, View, Platform, type TextInputProps } from "react-native";
-import { useThemeColor } from "@/hooks/useThemeColor";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Animated,
+  Platform,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+  type TextInputProps,
+} from "react-native";
+import { getStringAsync, setStringAsync } from "expo-clipboard";
 import { Typography } from "@/components/Typography";
-import { Div } from "@/components/Div";
-import { Pressable, TouchableOpacity } from "react-native";
-import { Copy } from "./icons/Copy";
-import { useRef, useState, useCallback, useMemo } from "react";
-import { setStringAsync, getStringAsync } from "expo-clipboard";
+import { useColorScheme } from "@/hooks/useColorScheme";
+import { useThemeColor } from "@/hooks/useThemeColor";
+import { parseClipboardAmount } from "@/utils/caracasTime";
 import { formatCurrency, formatNumber } from "@/utils/formatCurrency";
 import { Tooltip } from "./Tooltip";
+import { Copy } from "./icons/Copy";
 import { Paste } from "./icons/Paste";
 
-// ── Helpers ────────────────────────────────────────────────────────────
-
-/**
- * Convert a decimal value to its integer cents representation.
- *
- * @example toCents(23.50, 2) → 2350
- * @example toCents(1, 2) → 100
- */
 function toCents(value: number | null, precision: number): number {
   if (value === null || isNaN(value)) return 0;
   return Math.round(Math.abs(value) * Math.pow(10, precision));
 }
 
-/**
- * Format a cents integer into a display string.
- *
- * @example formatCentsDisplay(2350, '.', ',', 2) → "23,50"
- * @example formatCentsDisplay(5, '.', ',', 2)    → "0,05"
- */
 function formatCentsDisplay(
   cents: number,
   delimiter: string,
@@ -38,8 +32,6 @@ function formatCentsDisplay(
   const value = cents / Math.pow(10, precision);
   return formatNumber(value, { delimiter, separator, precision });
 }
-
-// ── Types ──────────────────────────────────────────────────────────────
 
 interface CurrencyInputProps
   extends Omit<TextInputProps, "value" | "onChangeText"> {
@@ -52,17 +44,12 @@ interface CurrencyInputProps
   label?: string;
   minValue?: number;
   maxValue?: number;
+  compact?: boolean;
 }
 
-// ── Component ──────────────────────────────────────────────────────────
-
 /**
- * Cents-first currency input (right-to-left digit entry).
- *
- * Uses a hidden TextInput for keyboard capture and a visible Text overlay
- * for formatted display.  No flash, no stacking, instant formatting.
- *
- * Typing "2", "3", "5", "0" produces: 0,02 → 0,23 → 2,35 → 23,50
+ * Cents-first currency input (right-to-left digit entry) styled with
+ * HeroUI Ultra-Flat borderless cards matching web CalculatorCard.
  */
 export function Currency({
   value,
@@ -74,37 +61,44 @@ export function Currency({
   label,
   minValue = 0,
   maxValue = 999999999999,
+  compact = false,
   ...props
 }: CurrencyInputProps) {
+  const isDark = (useColorScheme() ?? "light") === "dark";
   const [
     textColor,
     textSecondaryColor,
-    bgColor,
-    borderColor,
-    iconColor,
-    bgFocusColor,
-    borderFocusColor,
+    textMutedColor,
+    surfaceColor,
+    surfaceHoverColor,
+    trayInnerColor,
+    primaryColor,
+    primaryInkColor,
+    dangerColor,
   ] = useThemeColor(
     "text",
     "textSecondary",
-    "backgroundSecondary",
-    "border",
-    "icon",
-    "backgroundFocus",
-    "borderFocus",
+    "textMuted",
+    "surface",
+    "surfaceHover",
+    "trayInner",
+    "primary",
+    "primaryInk",
+    "danger",
   );
-  const [copied, setCopied] = useState(false);
+
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">(
+    "idle",
+  );
   const [tooltip, setTooltip] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<TextInput>(null);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const copyTipAnim = useRef(new Animated.Value(0)).current;
 
-  // ── Core state: integer cents ──
   const [rawCents, setRawCents] = useState(() => toCents(value, precision));
-
-  // Track last value we emitted to detect external changes
   const lastEmittedValue = useRef(value);
 
-  // Sync when value changes externally (rate change, other input recalc)
   if (value !== lastEmittedValue.current) {
     lastEmittedValue.current = value;
     const externalCents = toCents(value, precision);
@@ -113,29 +107,31 @@ export function Currency({
     }
   }
 
-  // ── Derived display values ──
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) {
+        clearTimeout(copyTimerRef.current);
+      }
+    };
+  }, []);
+
   const displayText = useMemo(
     () => formatCentsDisplay(rawCents, delimiter, separator, precision),
     [rawCents, delimiter, separator, precision],
   );
 
-  // Hidden input value: raw digits string for keyboard capture
   const hiddenValue = rawCents.toString();
 
-  // Memoize selection to avoid creating new objects on every render
   const selection = useMemo(
     () => ({ start: hiddenValue.length, end: hiddenValue.length }),
     [hiddenValue.length],
   );
 
-  // ── Keyboard handler ──
   const handleChangeText = useCallback(
     (text: string) => {
-      // Extract ONLY digits from whatever the platform gives us
       const digits = text.replace(/\D/g, "");
       const newCents = parseInt(digits, 10) || 0;
 
-      // Clamp to max
       const numericValue = newCents / Math.pow(10, precision);
       if (numericValue > maxValue) return;
       if (numericValue < minValue) return;
@@ -147,181 +143,324 @@ export function Currency({
     [precision, maxValue, minValue, onChangeValue],
   );
 
-  // ── Clipboard actions ──
+  const triggerCopyFeedback = (status: "copied" | "error") => {
+    if (copyTimerRef.current) {
+      clearTimeout(copyTimerRef.current);
+    }
+    setCopyStatus(status);
+    copyTipAnim.setValue(0);
+    Animated.timing(copyTipAnim, {
+      toValue: 1,
+      duration: 140,
+      useNativeDriver: true,
+    }).start();
+
+    copyTimerRef.current = setTimeout(() => {
+      setCopyStatus("idle");
+      copyTipAnim.setValue(0);
+    }, 1500);
+  };
+
   const copy = async () => {
-    await setStringAsync(formatCurrency(value ?? 0, suffix));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    try {
+      const displayedNumeric = rawCents / Math.pow(10, precision);
+      await setStringAsync(formatCurrency(displayedNumeric, suffix));
+      triggerCopyFeedback("copied");
+    } catch {
+      triggerCopyFeedback("error");
+    }
   };
 
   const paste = async () => {
-    const clipboardContent = await getStringAsync();
-    const match = clipboardContent.match(/-?\d+(?:[.,]\d+)*(?:[.,]\d+)?/);
-
-    if (match) {
-      const numberString = match[0].replace(/\./g, "").replace(",", ".");
-      const pastedValue = parseFloat(numberString);
-      if (!isNaN(pastedValue)) {
+    try {
+      const clipboardContent = await getStringAsync();
+      const pastedValue = parseClipboardAmount(clipboardContent);
+      if (pastedValue !== null && pastedValue <= maxValue && pastedValue >= minValue) {
         const pastedCents = toCents(pastedValue, precision);
         setRawCents(pastedCents);
         lastEmittedValue.current = pastedValue;
         onChangeValue?.(pastedValue);
       }
+    } finally {
+      setTooltip(false);
     }
-
-    setTooltip(false);
   };
 
+  const cardPaddingV = compact ? 12 : 14;
+  const cardPaddingH = 17;
+  const isRaised = tooltip || copyStatus !== "idle";
+
+  const cardShadowStyle = isDark
+    ? {
+        shadowOpacity: 0,
+        elevation: 0,
+      }
+    : {
+        shadowColor: "#0f172a",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.07,
+        shadowRadius: 10,
+        elevation: 2,
+      };
+
+  const tipTranslateY = copyTipAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [3, 0],
+  });
+
   return (
-    <>
-      <Div>
-        {label && (
-          <Typography style={{ paddingLeft: 5 }} type="md">
-            {label}
-          </Typography>
-        )}
-
-        <View style={{ position: "relative" }}>
-          <TouchableOpacity
-            onPress={() => inputRef.current?.focus()}
-            onLongPress={() => setTooltip(true)}
-            activeOpacity={0.7}
-          >
-            <View
-              style={{ position: "relative" }}
-              pointerEvents={Platform.OS === "web" ? "auto" : "none"}
+    <View
+      style={{
+        position: "relative",
+        zIndex: isRaised ? 15 : 1,
+      }}
+    >
+      <Pressable
+        onPress={() => inputRef.current?.focus()}
+        onLongPress={() => setTooltip(true)}
+        delayLongPress={400}
+        accessibilityRole="button"
+        accessibilityLabel={`Editar monto en ${label ?? suffix}`}
+        style={{
+          position: "relative",
+          backgroundColor: isFocused ? surfaceHoverColor : surfaceColor,
+          borderWidth: 0,
+          borderRadius: 16,
+          paddingVertical: cardPaddingV,
+          paddingHorizontal: cardPaddingH,
+          ...cardShadowStyle,
+        }}
+      >
+        {/* Top Row: Label (left) + spacer for floating Copy pill (right) */}
+        <View
+          style={{
+            minHeight: 34,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            paddingRight: 96,
+          }}
+        >
+          {label ? (
+            <Typography
+              type="label"
+              numberOfLines={1}
+              style={{ color: textMutedColor }}
             >
-              {/* Suffix label (Bs / $) */}
-              <Typography
-                type="subtitle"
-                pointerEvents="none"
-                style={{
-                  position: "absolute",
-                  left: 14,
-                  top: 13,
-                  zIndex: 99,
-                  fontSize: 16,
-                  color: textSecondaryColor,
-                }}
-              >
-                {suffix}
-              </Typography>
+              {label}
+            </Typography>
+          ) : null}
+        </View>
 
-              {/* Hidden TextInput — captures keyboard, text invisible */}
-              <TextInput
-                {...props}
-                ref={inputRef}
-                value={hiddenValue}
-                onChangeText={handleChangeText}
-                selection={selection}
-                keyboardType="number-pad"
-                caretHidden={true}
-                contextMenuHidden={Platform.OS === "web" ? false : true}
-                autoCorrect={false}
-                autoComplete="off"
-                onFocus={(e) => {
-                  setIsFocused(true);
-                  props.onFocus?.(e);
-                }}
-                onBlur={(e) => {
-                  setIsFocused(false);
-                  props.onBlur?.(e);
-                }}
-                style={[
-                  {
-                    backgroundColor: isFocused ? bgFocusColor : bgColor,
-                    fontSize: 16,
-                    lineHeight: 32,
-                    fontFamily: "Poppins_600SemiBold",
-                    borderStyle: "solid",
-                    borderWidth: 1,
-                    borderColor: isFocused ? borderFocusColor : borderColor,
-                    borderRadius: 10,
-                    padding: 0,
-                    paddingLeft: 40,
-                    height: 50,
-                    color: "transparent",
-                  },
-                  Platform.OS === "web"
-                    ? ({ caretColor: "transparent" } as any)
-                    : {},
-                ]}
-              />
+        {/* Value Row: Prefix + Tabular Big Amount */}
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "baseline",
+            gap: 6,
+            marginTop: 2,
+          }}
+          pointerEvents="none"
+        >
+          <Text
+            style={{
+              fontFamily: "Poppins_700Bold",
+              fontSize: 18,
+              lineHeight: 22,
+              color: textSecondaryColor,
+            }}
+          >
+            {suffix}
+          </Text>
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.6}
+            style={{
+              flexShrink: 1,
+              fontFamily: "Poppins_800ExtraBold",
+              fontSize: compact ? 26 : 29,
+              lineHeight: compact ? 31 : 34,
+              letterSpacing: -0.7,
+              color: textColor,
+              fontVariant: ["tabular-nums"],
+            }}
+          >
+            {displayText}
+          </Text>
+        </View>
 
-              {/* Visible formatted text overlay — matches suffix position exactly */}
-              <Text
-                style={{
-                  position: "absolute",
-                  left: 40,
-                  top: 13,
-                  fontSize: 16,
-                  fontFamily: "Poppins_600SemiBold",
-                  color: textColor,
-                }}
-                pointerEvents="none"
-              >
-                {displayText}
-              </Text>
-            </View>
-          </TouchableOpacity>
+        {/* Hidden TextInput for keyboard capture */}
+        <View
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+          }}
+          pointerEvents={Platform.OS === "web" ? "auto" : "none"}
+        >
+          <TextInput
+            {...props}
+            ref={inputRef}
+            value={hiddenValue}
+            onChangeText={handleChangeText}
+            selection={selection}
+            keyboardType="number-pad"
+            caretHidden={true}
+            contextMenuHidden={Platform.OS !== "web"}
+            autoCorrect={false}
+            autoComplete="off"
+            onFocus={(e) => {
+              setIsFocused(true);
+              props.onFocus?.(e);
+            }}
+            onBlur={(e) => {
+              setIsFocused(false);
+              props.onBlur?.(e);
+            }}
+            style={[
+              {
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                opacity: 0,
+                fontSize: 16,
+              },
+              Platform.OS === "web"
+                ? ({ caretColor: "transparent" } as any)
+                : {},
+            ]}
+          />
+        </View>
+      </Pressable>
 
-          {/* Copy button */}
-          <TouchableOpacity
-            onPress={copy}
+      {/* Copy Pill Button + Floating Feedback Tooltip (independent of card press) */}
+      <View
+        style={{
+          position: "absolute",
+          top: cardPaddingV,
+          right: cardPaddingH,
+          zIndex: 10,
+          alignItems: "flex-end",
+        }}
+      >
+        {copyStatus !== "idle" && (
+          <Animated.View
+            pointerEvents="none"
             style={{
               position: "absolute",
+              bottom: "100%",
+              marginBottom: 6,
               right: 0,
-              top: 2,
-              bottom: 0,
-              width: 40,
-              justifyContent: "center",
-              alignItems: "center",
+              zIndex: 25,
+              borderRadius: 999,
+              paddingHorizontal: 10,
+              paddingVertical: 4,
+              backgroundColor:
+                copyStatus === "error" ? dangerColor : primaryColor,
+              opacity: copyTipAnim,
+              transform: [{ translateY: tipTranslateY }],
+              shadowColor: isDark ? "#000000" : "#0f172a",
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: isDark ? 0.5 : 0.18,
+              shadowRadius: 14,
+              elevation: 8,
             }}
           >
-            <Copy
-              width={20}
-              height={20}
-              color={copied ? iconColor : textSecondaryColor}
-              check={copied}
-            />
-          </TouchableOpacity>
+            <Text
+              numberOfLines={1}
+              style={{
+                fontFamily: "Poppins_600SemiBold",
+                fontSize: 12,
+                lineHeight: 15,
+                color: "#ffffff",
+              }}
+            >
+              {copyStatus === "error" ? "No se pudo copiar" : "¡Copiado!"}
+            </Text>
+          </Animated.View>
+        )}
 
-          {/* Paste tooltip */}
-          <Tooltip
-            open={tooltip}
-            setOpen={setTooltip}
+        <Pressable
+          onPress={copy}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          accessibilityRole="button"
+          accessibilityLabel={`Copiar monto en ${label ?? suffix}`}
+          style={({ pressed }) => ({
+            minHeight: 34,
+            paddingHorizontal: 11,
+            paddingVertical: 7,
+            borderRadius: 12,
+            borderWidth: 0,
+            backgroundColor: trayInnerColor,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            transform: [{ scale: pressed ? 0.95 : 1 }],
+            opacity: pressed ? 0.85 : 1,
+          })}
+        >
+          <Copy
+            width={15}
+            height={15}
+            color={copyStatus === "copied" ? primaryInkColor : textSecondaryColor}
+            check={copyStatus === "copied"}
+          />
+          <Text
             style={{
-              right: 40,
-              top: -30,
-              zIndex: 99,
+              fontFamily: "Poppins_600SemiBold",
+              fontSize: 12,
+              lineHeight: 15,
+              color:
+                copyStatus === "copied" ? primaryInkColor : textSecondaryColor,
             }}
           >
-            <TouchableOpacity onPress={paste}>
-              <Typography
-                type="md"
-                style={{
-                  fontFamily: "Poppins_600SemiBold",
-                  color: textSecondaryColor,
-                }}
-              >
-                <Paste
-                  width={16}
-                  height={16}
-                  color={textSecondaryColor}
-                  style={{ transform: [{ translateY: 3 }] }}
-                />
-                {"  "}
-                Pegar
-              </Typography>
-            </TouchableOpacity>
-          </Tooltip>
-        </View>
-      </Div>
-    </>
+            Copiar
+          </Text>
+        </Pressable>
+      </View>
+
+      {/* Long-Press Paste Tooltip */}
+      <Tooltip
+        open={tooltip}
+        setOpen={setTooltip}
+        style={{
+          left: 16,
+          top: -40,
+        }}
+      >
+        <Pressable
+          onPress={paste}
+          style={({ pressed }) => ({
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+            minHeight: 30,
+            paddingHorizontal: 2,
+            opacity: pressed ? 0.7 : 1,
+          })}
+        >
+          <Paste width={16} height={16} color={textSecondaryColor} />
+          <Text
+            style={{
+              fontFamily: "Poppins_600SemiBold",
+              fontSize: 13,
+              lineHeight: 18,
+              color: textSecondaryColor,
+            }}
+          >
+            Pegar
+          </Text>
+        </Pressable>
+      </Tooltip>
+    </View>
   );
 }
-
-// ── Display-only component ─────────────────────────────────────────────
 
 export function TextCurrency({
   value = 0,
@@ -336,7 +475,7 @@ export function TextCurrency({
   separator?: string;
   precision?: number;
 }) {
-  const val = isNaN(value ?? 0) ? 0 : value ?? 0;
+  const val = isNaN(value ?? 0) ? 0 : (value ?? 0);
   const formattedValue = formatNumber(val, {
     suffix: " " + suffix,
     delimiter,

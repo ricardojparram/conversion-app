@@ -3,8 +3,10 @@ import { Stack } from "expo-router";
 import Head from "expo-router/head";
 import {
   Poppins_400Regular,
+  Poppins_500Medium,
   Poppins_600SemiBold,
   Poppins_700Bold,
+  Poppins_800ExtraBold,
   useFonts,
 } from "@expo-google-fonts/poppins";
 
@@ -17,8 +19,10 @@ import { useColorScheme } from "@/hooks/useColorScheme";
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     Poppins_400Regular,
+    Poppins_500Medium,
     Poppins_600SemiBold,
     Poppins_700Bold,
+    Poppins_800ExtraBold,
   });
 
   useEffect(() => {

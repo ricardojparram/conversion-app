@@ -8,20 +8,44 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     fontFamily: "Poppins_400Regular",
   },
+  medium: {
+    fontSize: 13,
+    lineHeight: 18,
+    fontFamily: "Poppins_500Medium",
+  },
   defaultSemiBold: {
     fontSize: 16,
     lineHeight: 24,
     fontFamily: "Poppins_600SemiBold",
   },
   title: {
-    fontSize: 26,
-    lineHeight: 32,
+    fontSize: 22,
+    lineHeight: 27,
+    letterSpacing: -0.55,
     fontFamily: "Poppins_700Bold",
   },
   subtitle: {
     fontSize: 18,
     lineHeight: 24,
     fontFamily: "Poppins_600SemiBold",
+  },
+  extraBold: {
+    fontSize: 28,
+    lineHeight: 33,
+    letterSpacing: -0.7,
+    fontFamily: "Poppins_800ExtraBold",
+  },
+  label: {
+    fontSize: 11,
+    lineHeight: 14,
+    letterSpacing: 0.66,
+    textTransform: "uppercase",
+    fontFamily: "Poppins_700Bold",
+  },
+  caption: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontFamily: "Poppins_500Medium",
   },
   link: {
     lineHeight: 30,

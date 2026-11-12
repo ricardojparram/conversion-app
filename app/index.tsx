@@ -1,402 +1,612 @@
-import { useState, useEffect, useCallback } from "react";
-import { Typography } from "@/components/Typography";
-import { Div } from "@/components/Div";
-import { ScrollDiv } from "@/components/ScrollDiv";
-import { Currency } from "@/components/Currency";
-import { ConvertionDisplay } from "@/components/Convertions";
-import { RateHistory } from "@/components/RateHistory";
-import { BottomDrawer } from "@/components/BottomDrawer";
-import { convertAmount } from "@/utils/calculateConvertions";
-import { convertionStore } from "@/store/convertions";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Animated,
+  Easing,
+  Keyboard,
   Platform,
-  RefreshControl,
-  Modal,
   Pressable,
+  RefreshControl,
+  ScrollView,
+  Text,
   View,
   useWindowDimensions,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useThemeColor } from "@/hooks/useThemeColor";
-import { TrendingUp } from "@/components/icons/TrendingUp";
-import { TrendingUpDown } from "@/components/icons/TrendingUpDown";
-import { ArrowRight } from "@/components/icons/ArrowRight";
-import { ArrowDownUp } from "@/components/icons/ArrowDownUp";
-import { Info } from "@/components/icons/Info";
-import { X } from "@/components/icons/X";
-import { getCaracasDate } from "@/utils/getCaracasDate";
+import * as Network from "expo-network";
+import {
+  SafeAreaProvider,
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
+import { BottomDrawer } from "@/components/BottomDrawer";
+import { ConvertionDisplay } from "@/components/Convertions";
+import { Currency } from "@/components/Currency";
 import { Tag } from "@/components/Tag";
+import { Typography } from "@/components/Typography";
+import { ArrowDownUp } from "@/components/icons/ArrowDownUp";
+import { BrandLogo } from "@/components/icons/BrandLogo";
+import { Info } from "@/components/icons/Info";
+import { useColorScheme } from "@/hooks/useColorScheme";
+import { useThemeColor } from "@/hooks/useThemeColor";
+import { convertionStore } from "@/store/convertions";
+import { convertAmount } from "@/utils/calculateConvertions";
+import {
+  getForeignCurrencyMeta,
+  resolveEffectiveConvertion,
+} from "@/utils/caracasTime";
 
-export default function Index() {
+function HomeScreen() {
+  const isDark = (useColorScheme() ?? "light") === "dark";
+  const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
+  const isCompact = windowHeight < 720;
+
   const [
-    iconColor,
     bgColor,
+    surfaceColor,
+    textColor,
     textSecondaryColor,
-    textPrimaryColor,
-    borderColor,
-    bgSecondaryColor,
+    textMutedColor,
+    primaryColor,
+    amberBgColor,
+    tintColor,
   ] = useThemeColor(
-    "icon",
     "background",
-    "textSecondary",
+    "surface",
     "text",
-    "border",
-    "backgroundSecondary",
+    "textSecondary",
+    "textMuted",
+    "primary",
+    "amberBg",
+    "tint",
   );
+
+  const convertions = convertionStore((state) => state.convertions);
+  const fetchConvertions = convertionStore((state) => state.fetchConvertions);
+
   const [bs, setBs] = useState<number | null>(0);
-  const [usd, setUSD] = useState<number | null>(0);
+  const [foreign, setForeign] = useState<number | null>(0);
+  const [lastEdited, setLastEdited] = useState<"bs" | "foreign">("foreign");
+  const [selectedCurrencyId, setSelectedCurrencyId] = useState<number>(0);
+  const [isSwapped, setIsSwapped] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [lastEdited, setLastEdited] = useState<"bs" | "usd">("bs");
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [notification, setNotification] = useState<
     "success" | "error" | "offline" | null
   >(null);
   const [isPolicyVisible, setIsPolicyVisible] = useState(false);
-  const [selectedCurrencyId, setSelectedCurrencyId] = useState<number>(0);
-  const [isHistoryModalVisible, setIsHistoryModalVisible] = useState(false);
+  const [cardHeights, setCardHeights] = useState({
+    foreign: isCompact ? 88 : 94,
+    bs: isCompact ? 88 : 94,
+  });
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [scrollViewportHeight, setScrollViewportHeight] = useState(0);
+  const restViewportHeightRef = useRef(0);
 
-  const { width } = useWindowDimensions();
-  const isDesktop = Platform.OS === "web" && width >= 768;
-
-  const convertions = convertionStore((state) => state.convertions);
-
-  const activeCurrency = convertions.find(
-    (c) => c.currency_id === selectedCurrencyId,
-  );
-  const activeCurrencyName = activeCurrency ? activeCurrency.currency_name : "";
-
-  const fetchConvertions = convertionStore((state) => state.fetchConvertions);
-  const fetch = async () => {
-    await fetchConvertions();
-  };
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const swapRotateAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    fetch();
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const showSub = Keyboard.addListener(showEvent, (event) => {
+      setKeyboardHeight(event.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        await fetchConvertions();
+      } catch {
+        // Offline-first fallback already hydrated from SQLite/localStorage
+      } finally {
+        if (active) {
+          setHasLoadedOnce(true);
+        }
+      }
+    })();
+    return () => {
+      active = false;
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, [fetchConvertions]);
+
+  const showToast = useCallback((type: "success" | "error" | "offline") => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
+    setNotification(type);
+    toastTimerRef.current = setTimeout(() => {
+      setNotification(null);
+    }, 2000);
   }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await fetch();
-      setNotification("success");
-    } catch (error: any) {
+      try {
+        const netState = await Network.getNetworkStateAsync();
+        if (
+          netState.isConnected === false ||
+          netState.isInternetReachable === false
+        ) {
+          showToast("offline");
+          return;
+        }
+      } catch {
+        // Continue to attempt fetch if network probe is unavailable
+      }
+
+      await fetchConvertions();
+      showToast("success");
+    } catch (error: unknown) {
       if (__DEV__) {
         console.error("Error refreshing convertions:", error);
       }
-      if (error.message === "No network connection") {
-        setNotification("offline");
-      } else {
-        setNotification("error");
+      const message = error instanceof Error ? error.message : "";
+      let isOffline =
+        message === "No network connection" ||
+        /network request failed|failed to fetch|offline/i.test(message);
+
+      if (!isOffline) {
+        try {
+          const netState = await Network.getNetworkStateAsync();
+          if (
+            netState.isConnected === false ||
+            netState.isInternetReachable === false
+          ) {
+            isOffline = true;
+          }
+        } catch {
+          // Keep error classification
+        }
       }
+
+      showToast(isOffline ? "offline" : "error");
     } finally {
       setRefreshing(false);
-      setTimeout(() => {
-        setNotification(null);
-      }, 2000);
     }
-  }, []);
-  const [rate, setRate] = useState(0);
-  useEffect(() => {
-    if (convertions[0]) {
-      const fechaCaracas = getCaracasDate();
-      if (convertions[0].date_old) {
-        const fechaOld = getCaracasDate(convertions[0].date_old);
-        if (fechaCaracas.getTime() <= fechaOld.getTime()) {
-          setRate(convertions[0].rate_old);
-        } else {
-          setRate(convertions[0].rate);
-        }
-      } else {
-        setRate(convertions[0].rate);
-      }
-      if (bs === 0 && usd === 0) {
-        handleUsdChange(1);
-      } else if (lastEdited === "bs") {
-        handleBsChange(bs);
-      } else {
-        handleUsdChange(usd);
-      }
-    }
-  }, [convertions]);
+  }, [fetchConvertions, showToast]);
 
+  // Keep selectedCurrencyId valid when convertions arrive
   useEffect(() => {
-    if (bs === 0 && usd === 0 && rate !== 0) {
-      handleUsdChange(1);
+    if (convertions.length === 0) return;
+    const exists = convertions.some(
+      (c) => c.currency_id === selectedCurrencyId,
+    );
+    if (!exists) {
+      setSelectedCurrencyId(convertions[0].currency_id);
+    }
+  }, [convertions, selectedCurrencyId]);
+
+  const activeConvertion = useMemo(
+    () =>
+      convertions.find((c) => c.currency_id === selectedCurrencyId) ??
+      convertions[0] ??
+      null,
+    [convertions, selectedCurrencyId],
+  );
+
+  const activeRate = useMemo(() => {
+    if (!activeConvertion) return 0;
+    return resolveEffectiveConvertion(activeConvertion).effectiveRate;
+  }, [activeConvertion]);
+
+  const { suffix, targetLabel } = useMemo(
+    () => getForeignCurrencyMeta(activeConvertion),
+    [activeConvertion],
+  );
+
+  const calcSnapshotRef = useRef({ bs, foreign, lastEdited });
+  calcSnapshotRef.current = { bs, foreign, lastEdited };
+
+  // Recalculate opposite amount whenever activeRate or selected source changes
+  useEffect(() => {
+    if (activeRate <= 0) return;
+
+    const {
+      bs: currentBs,
+      foreign: currentForeign,
+      lastEdited: currentLastEdited,
+    } = calcSnapshotRef.current;
+
+    if ((currentBs ?? 0) === 0 && (currentForeign ?? 0) === 0) {
+      setLastEdited("foreign");
+      setForeign(1);
+      setBs(convertAmount(1, activeRate, "usdToBs"));
       return;
     }
-    if (lastEdited === "bs") {
-      const newUsd = convertAmount(bs || 0, rate, "bsToUsd");
-      setUSD(newUsd);
+
+    if (currentLastEdited === "bs") {
+      setForeign(convertAmount(currentBs || 0, activeRate, "bsToUsd"));
     } else {
-      const newBs = convertAmount(usd || 0, rate, "usdToBs");
-      setBs(newBs);
+      setBs(convertAmount(currentForeign || 0, activeRate, "usdToBs"));
     }
-  }, [rate]);
+  }, [activeRate, selectedCurrencyId]);
 
-  const handleBsChange = (newBs: number | null) => {
-    setLastEdited("bs");
-    if (newBs === null) {
-      setBs(null);
-      setUSD(null);
-      return;
-    }
-    if (newBs !== bs) {
+  const handleBsChange = useCallback(
+    (newBs: number | null) => {
+      setLastEdited("bs");
+      if (newBs === null) {
+        setBs(null);
+        setForeign(null);
+        return;
+      }
       setBs(newBs);
-      const newUsd = convertAmount(newBs, rate, "bsToUsd");
-      setUSD(newUsd);
-    }
-  };
+      setForeign(convertAmount(newBs, activeRate, "bsToUsd"));
+    },
+    [activeRate],
+  );
 
-  const handleUsdChange = (newUsd: number | null) => {
-    setLastEdited("usd");
-    if (newUsd === null) {
-      setBs(null);
-      setUSD(null);
-      return;
-    }
-    if (newUsd !== usd) {
-      setUSD(newUsd);
-      const newBs = convertAmount(newUsd, rate, "usdToBs");
-      setBs(newBs);
-    }
-  };
-  const resetInputs = () => {
+  const handleForeignChange = useCallback(
+    (newForeign: number | null) => {
+      setLastEdited("foreign");
+      if (newForeign === null) {
+        setBs(null);
+        setForeign(null);
+        return;
+      }
+      setForeign(newForeign);
+      setBs(convertAmount(newForeign, activeRate, "usdToBs"));
+    },
+    [activeRate],
+  );
+
+  const resetInputs = useCallback(() => {
     setBs(0);
-    setUSD(0);
-  };
+    setForeign(0);
+  }, []);
+
+  const handleSwap = useCallback(() => {
+    const nextSwapped = !isSwapped;
+    setIsSwapped(nextSwapped);
+    Animated.timing(swapRotateAnim, {
+      toValue: nextSwapped ? 1 : 0,
+      duration: 220,
+      easing: Easing.bezier(0.22, 1, 0.36, 1),
+      useNativeDriver: true,
+    }).start();
+  }, [isSwapped, swapRotateAnim]);
+
+  const swapRotate = swapRotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "180deg"],
+  });
+
+  const swapShadowStyle = isDark
+    ? {
+        shadowColor: "transparent",
+        shadowOpacity: 0,
+        shadowRadius: 0,
+        elevation: 6,
+      }
+    : {
+        shadowColor: "#0f172a",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.12,
+        shadowRadius: 8,
+        elevation: 6,
+      };
+
+  const showOfflineBanner = hasLoadedOnce && convertions.length === 0;
+  const topCardHeight = isSwapped ? cardHeights.bs : cardHeights.foreign;
+  const topPadding = isCompact ? 48 : 68;
+  const bottomPadding = isCompact ? 6 : 10;
+  const activeViewportHeight = scrollViewportHeight || restViewportHeightRef.current;
+  const osShrink =
+    restViewportHeightRef.current > 0
+      ? Math.max(0, restViewportHeightRef.current - activeViewportHeight)
+      : 0;
+  const extraKeyboardPadding =
+    keyboardHeight > 0
+      ? Math.max(0, keyboardHeight - insets.bottom - osShrink + 12)
+      : 0;
+  const stageMinHeight =
+    restViewportHeightRef.current > 0
+      ? Math.max(0, restViewportHeightRef.current - topPadding - bottomPadding)
+      : undefined;
 
   return (
-    <ScrollDiv
-      style={{ backgroundColor: bgColor, position: "relative" }}
-      contentContainerStyle={{ flexGrow: 1 }}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          title="Actualizando..."
-          progressBackgroundColor={"#e6eff8"}
-          colors={[iconColor]}
-        />
-      }
+    <SafeAreaView
+      edges={["top", "bottom"]}
+      style={{
+        flex: 1,
+        backgroundColor: bgColor,
+        position: "relative",
+      }}
     >
-      <View
-        style={{
-          position: "absolute",
-          top: 80,
-          left: 0,
-          right: 0,
-          zIndex: 99,
-          flexDirection: "row",
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-        pointerEvents="none"
-      >
-        {notification === "error" && (
-          <Tag variant="error">Error al actualizar</Tag>
-        )}
-        {notification === "offline" && <Tag variant="error">Sin conexión</Tag>}
-        {notification === "success" && <Tag variant="success">Actualizado</Tag>}
-      </View>
-      <Div
-        style={[
-          {
-            width: "100%",
-            flex: 1,
-          },
-          Platform.OS === "web"
-            ? ({
-                height: "100dvh",
-                justifyContent: "center",
-                alignItems: "center",
-              } as any)
-            : {},
-        ]}
-      >
-        <Div
+      {/* Floating Toast Pill */}
+      {notification !== null && (
+        <View
+          pointerEvents="none"
           style={{
-            flex: 1,
+            position: "absolute",
+            top: Math.max(insets.top + 8, 16),
+            left: 0,
+            right: 0,
+            zIndex: 99,
+            flexDirection: "row",
             justifyContent: "center",
-            alignItems: "center",
-            width: "100%",
-            alignSelf: "center",
-            maxWidth: 400,
+            paddingHorizontal: 16,
           }}
         >
-          {/* Left Block: Calculator Card */}
+          {notification === "success" && (
+            <Tag variant="success">Actualizado</Tag>
+          )}
+          {notification === "offline" && (
+            <Tag variant="error">Sin conexión</Tag>
+          )}
+          {notification === "error" && (
+            <Tag variant="error">Error al actualizar</Tag>
+          )}
+        </View>
+      )}
+
+      {/* Single-Screen Upper-Aligned Calculator + Native Pull-to-Refresh */}
+      <ScrollView
+        style={{ flex: 1 }}
+        onLayout={(event) => {
+          const height = event.nativeEvent.layout.height;
+          setScrollViewportHeight(height);
+          if (keyboardHeight === 0 && height > 0) {
+            restViewportHeightRef.current = height;
+          }
+        }}
+        contentContainerStyle={{
+          flexGrow: 1,
+          width: "100%",
+          maxWidth: 440,
+          alignSelf: "center",
+          paddingHorizontal: 16,
+          paddingTop: topPadding,
+          paddingBottom: bottomPadding,
+        }}
+        showsVerticalScrollIndicator={false}
+        alwaysBounceVertical={true}
+        overScrollMode="always"
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            progressBackgroundColor={surfaceColor}
+            colors={[primaryColor]}
+            tintColor={primaryColor}
+          />
+        }
+      >
+        <View
+          style={{
+            flexGrow: 1,
+            minHeight: stageMinHeight,
+            justifyContent: "space-between",
+          }}
+        >
+          {/* Main Hero Upper Stage */}
           <View style={{ width: "100%" }}>
-            <Div
+            {/* Header Block */}
+            <View
               style={{
-                gap: 10,
-                width: "100%",
-                paddingVertical: 15,
-                paddingHorizontal: 40,
+                alignItems: "center",
+                marginBottom: isCompact ? 10 : 14,
               }}
             >
-              <Div
+              <View style={{ marginBottom: isCompact ? 6 : 8 }}>
+                <BrandLogo size={46} />
+              </View>
+
+              <Text
                 style={{
-                  width: "100%",
-                  marginBottom: 20,
+                  fontFamily: "Poppins_700Bold",
+                  fontSize: isCompact ? 21 : 23,
+                  lineHeight: isCompact ? 26 : 28,
+                  letterSpacing: -0.55,
+                  color: textColor,
+                  textAlign: "center",
                 }}
               >
-                <Div
-                  style={{
-                    display: "flex",
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 10,
-                    marginBottom: 5,
-                  }}
-                >
-                  <TrendingUp width={24} height={24} color={iconColor} />
-                  <Typography
-                    type="title"
-                    style={{
-                      textAlignVertical: "center",
-                      display: "flex",
-                      alignItems: "center",
-                    }}
-                  >
-                    Cambio rápido
-                  </Typography>
-                </Div>
-                <Div
-                  style={{
-                    display: "flex",
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Typography
-                    type="md"
-                    style={{
-                      textAlignVertical: "center",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: textSecondaryColor,
-                    }}
-                  >
-                    Bolívares{" "}
-                    <ArrowRight
-                      width={16}
-                      height={16}
-                      color={textSecondaryColor}
-                      style={{ transform: [{ translateY: 3 }] }}
-                    />{" "}
-                    Dólares
-                  </Typography>
-                </Div>
-              </Div>
-              <Currency
-                value={bs}
-                onChangeValue={handleBsChange}
-                onFocus={resetInputs}
-                label="Bolívares"
-              />
-              <ArrowDownUp
-                width={20}
-                height={20}
-                color={iconColor}
-                style={{ alignSelf: "center", marginTop: 10 }}
-              />
-              <Currency
-                suffix="$"
-                value={usd}
-                onChangeValue={handleUsdChange}
-                onFocus={resetInputs}
-                label="Dólares"
-              />
-            </Div>
+                Cambio rápido
+              </Text>
 
-            <Div
-              style={{
-                gap: 10,
-                width: "100%",
-                paddingVertical: 10,
-                paddingHorizontal: 40,
-                justifyContent: "center",
-              }}
-            >
-              <ConvertionDisplay
-                convertions={convertions}
-                setRate={setRate}
-                selectedId={selectedCurrencyId}
-                setSelectedId={setSelectedCurrencyId}
-              />
-              {selectedCurrencyId > 0 && (
-                <TouchableOpacity
-                  onPress={() => setIsHistoryModalVisible(true)}
+              <Text
+                style={{
+                  marginTop: 3,
+                  fontFamily: "Poppins_500Medium",
+                  fontSize: 13,
+                  lineHeight: 18,
+                  color: textSecondaryColor,
+                  textAlign: "center",
+                }}
+              >
+                {isSwapped
+                  ? `Bolívares → ${targetLabel}`
+                  : `${targetLabel} → Bolívares`}
+              </Text>
+            </View>
+
+            {/* Offline Empty-Cache Banner */}
+            {showOfflineBanner && (
+              <View
+                style={{
+                  marginBottom: 12,
+                  paddingVertical: 9,
+                  paddingHorizontal: 14,
+                  borderRadius: 12,
+                  borderWidth: 0,
+                  backgroundColor: amberBgColor,
+                }}
+              >
+                <Text
                   style={{
-                    borderWidth: 1,
-                    borderColor: borderColor,
-                    borderRadius: 10,
-                    paddingVertical: 10,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 6,
-                    width: "100%",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: bgSecondaryColor,
-                    marginTop: 10,
+                    fontFamily: "Poppins_500Medium",
+                    fontSize: 13,
+                    lineHeight: 18,
+                    color: tintColor,
+                    textAlign: "center",
                   }}
                 >
-                  <TrendingUpDown width={18} height={18} color={iconColor} />
-                  <Typography
-                    type="defaultSemiBold"
-                    style={{ color: textSecondaryColor }}
-                  >
-                    Ver tendencia y fluctuación
-                  </Typography>
-                </TouchableOpacity>
-              )}
-            </Div>
+                  Mostrando modo sin conexión. Conéctate e intenta actualizar
+                  las tasas.
+                </Text>
+              </View>
+            )}
+
+            {/* Stacked Inputs + Always-On-Top Circular Swap Overlay */}
+            <View style={{ position: "relative" }}>
+              <View
+                style={{
+                  flexDirection: isSwapped ? "column-reverse" : "column",
+                  gap: 16,
+                  zIndex: 1,
+                  elevation: 0,
+                }}
+              >
+                <View
+                  key="foreign"
+                  onLayout={(event) => {
+                    const height = event.nativeEvent.layout.height;
+                    setCardHeights((prev) =>
+                      prev.foreign === height ? prev : { ...prev, foreign: height },
+                    );
+                  }}
+                >
+                  <Currency
+                    label={targetLabel}
+                    suffix={suffix}
+                    value={foreign}
+                    onChangeValue={handleForeignChange}
+                    onFocus={resetInputs}
+                    compact={isCompact}
+                  />
+                </View>
+
+                <View
+                  key="bs"
+                  onLayout={(event) => {
+                    const height = event.nativeEvent.layout.height;
+                    setCardHeights((prev) =>
+                      prev.bs === height ? prev : { ...prev, bs: height },
+                    );
+                  }}
+                >
+                  <Currency
+                    label="Bolívares"
+                    suffix="Bs"
+                    value={bs}
+                    onChangeValue={handleBsChange}
+                    onFocus={resetInputs}
+                    compact={isCompact}
+                  />
+                </View>
+              </View>
+
+              <Pressable
+                onPress={handleSwap}
+                accessibilityRole="button"
+                accessibilityLabel="Invertir orden de monedas"
+                accessibilityState={{ selected: isSwapped }}
+                style={({ pressed }) => ({
+                  position: "absolute",
+                  top: topCardHeight - 14,
+                  alignSelf: "center",
+                  zIndex: 30,
+                  width: 44,
+                  height: 44,
+                  borderRadius: 999,
+                  borderWidth: 0,
+                  backgroundColor: primaryColor,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transform: [{ scale: pressed ? 0.95 : 1 }],
+                  opacity: pressed ? 0.92 : 1,
+                  ...swapShadowStyle,
+                })}
+              >
+                <Animated.View style={{ transform: [{ rotate: swapRotate }] }}>
+                  <ArrowDownUp width={20} height={20} color="#ffffff" />
+                </Animated.View>
+              </Pressable>
+            </View>
+
+            {/* Sources Section */}
+            <ConvertionDisplay
+              convertions={convertions}
+              selectedId={selectedCurrencyId}
+              onSelectSource={setSelectedCurrencyId}
+              onRefresh={onRefresh}
+              refreshing={refreshing}
+              compact={isCompact}
+            />
           </View>
-        </Div>
-        <Div
-          style={{
-            width: "100%",
-            paddingHorizontal: 40,
-            paddingVertical: 30,
-            marginTop: "auto",
-            alignItems: "center",
-          }}
-        >
-          <Pressable
-            onPress={() => setIsPolicyVisible(true)}
+
+          {/* Discreet Legal & Privacy Trigger */}
+          <View
             style={{
-              flexDirection: "row",
               alignItems: "center",
-              gap: 6,
-              opacity: 0.5,
-              padding: 10,
+              paddingTop: 14,
+              paddingBottom: isCompact ? 2 : 4,
             }}
           >
-            <Info width={14} height={14} color={textSecondaryColor} />
-            <Typography
-              type="md"
-              style={{
-                color: textSecondaryColor,
-                fontSize: 12,
-              }}
+            <Pressable
+              onPress={() => setIsPolicyVisible(true)}
+              hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
+              accessibilityRole="button"
+              accessibilityLabel="Aviso Legal y Privacidad"
+              style={({ pressed }) => ({
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 5,
+                paddingVertical: 6,
+                paddingHorizontal: 10,
+                borderRadius: 999,
+                opacity: pressed ? 0.95 : 0.65,
+              })}
             >
-              Aviso Legal y Privacidad
-            </Typography>
-          </Pressable>
-        </Div>
-      </Div>
+              <Info width={13} height={13} color={textMutedColor} />
+              <Text
+                style={{
+                  fontFamily: "Poppins_500Medium",
+                  fontSize: 12,
+                  lineHeight: 16,
+                  color: textMutedColor,
+                }}
+              >
+                Aviso Legal y Privacidad
+              </Text>
+            </Pressable>
+          </View>
+        </View>
 
+        {extraKeyboardPadding > 0 && (
+          <View style={{ height: extraKeyboardPadding }} />
+        )}
+      </ScrollView>
+
+      {/* Legal & Privacy Drawer */}
       <BottomDrawer
         visible={isPolicyVisible}
         onClose={() => setIsPolicyVisible(false)}
         title="Términos y Privacidad"
       >
-        <Typography type="subtitle" style={{ marginBottom: 10, fontSize: 16 }}>
+        <Typography
+          type="subtitle"
+          style={{ marginBottom: 10, fontSize: 16, color: textColor }}
+        >
           1. Descargo de Responsabilidad
         </Typography>
         <Typography
@@ -413,7 +623,7 @@ export default function Index() {
             type="md"
             style={{
               fontFamily: "Poppins_700Bold",
-              color: textSecondaryColor,
+              color: textColor,
               fontSize: 14,
             }}
           >
@@ -429,7 +639,10 @@ export default function Index() {
           riesgo.
         </Typography>
 
-        <Typography type="subtitle" style={{ marginBottom: 10, fontSize: 16 }}>
+        <Typography
+          type="subtitle"
+          style={{ marginBottom: 10, fontSize: 16, color: textColor }}
+        >
           2. Privacidad y Datos
         </Typography>
         <Typography
@@ -446,19 +659,14 @@ export default function Index() {
           Funciona únicamente como un agregador de información pública.
         </Typography>
       </BottomDrawer>
+    </SafeAreaView>
+  );
+}
 
-      <BottomDrawer
-        visible={isHistoryModalVisible}
-        onClose={() => setIsHistoryModalVisible(false)}
-        title="Tendencia de Tasa"
-      >
-        {selectedCurrencyId > 0 && (
-          <RateHistory
-            currencyId={selectedCurrencyId}
-            currencyName={activeCurrencyName}
-          />
-        )}
-      </BottomDrawer>
-    </ScrollDiv>
+export default function Index() {
+  return (
+    <SafeAreaProvider>
+      <HomeScreen />
+    </SafeAreaProvider>
   );
 }
