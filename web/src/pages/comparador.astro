@@ -2,7 +2,7 @@
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import BrandLogo from "@/components/icons/BrandLogo.astro";
 import { buildPageMeta } from "@/lib/seo/meta";
-import { fetchRates } from "@/lib/rates/supabase";
+import { fetchLatestRatesSnapshot } from "@/lib/rates/supabase";
 import { formatNumber } from "@/lib/rates/format";
 import type { ResolvedRate } from "@/lib/rates/types";
 
@@ -18,7 +18,7 @@ let bcvRate = 899.27;
 let marketRate = 1074.76;
 
 try {
-  const { rates } = await fetchRates();
+  const { rates } = await fetchLatestRatesSnapshot();
   const bcvRow =
     rates.find(
       (r: ResolvedRate) =>
