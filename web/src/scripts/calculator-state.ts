@@ -163,11 +163,13 @@ export function applyClipboardValue(
 export function selectSource(
   state: CalculatorState,
   currencyId: number,
+  topField: "bs" | "foreign" = "foreign",
 ): CalculatorState {
   if (!state.rates.some((r) => r.currencyId === currencyId)) return state;
   return recalculateFromLastEdited({
     ...state,
     selectedCurrencyId: currencyId,
+    lastEdited: topField,
   });
 }
 

@@ -458,7 +458,7 @@ function setupCalculatorRoot(root: HTMLElement): void {
   const attachSourceHandler = (btn: HTMLButtonElement) => {
     btn.addEventListener("click", () => {
       const id = Number(btn.dataset.currencyId);
-      state = selectSource(state, id);
+      state = selectSource(state, id, isSwapped ? "bs" : "foreign");
       render();
       window.dispatchEvent(
         new CustomEvent("cr:source-changed", { detail: { currencyId: id } }),

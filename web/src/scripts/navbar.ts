@@ -76,3 +76,67 @@ export function initNavbar(): void {
     }
   });
 }
+
+async function initNavBrechaBadge() {
+  const badges = document.querySelectorAll<HTMLElement>("[data-nav-brecha-badge]");
+  if (badges.length === 0) return;
+
+  try {
+    const res = await fetch("/api/rates.json");
+    if (!res.ok) return;
+    const data = (await res.json()) as {
+      rates?: Array<{ source?: string; code?: string; currency_name?: string; effectiveRate?: number; rate?: number }>;
+    };
+    const list = data.rates ?? [];
+    const bcvRow =
+      list.find(
+        (c) =>
+          (c.source ?? "").toUpperCase() === "BCV" &&
+          (c.code ?? "").toUpperCase() !== "EUR" &&
+          !(c.currency_name ?? "").toLowerCase().includes("euro"),
+      ) ?? list[0];
+    const marketRow =
+      list.find((c) => (c.currency_name ?? "").toLowerCase().includes("venta")) ??
+      list.find(
+        (c) =>
+          (c.source ?? "").toUpperCase() !== "BCV" &&
+          (c.code ?? "").toUpperCase() !== "EUR",
+      ) ??
+      list[1];
+
+    const bcv = bcvRow?.effectiveRate ?? bcvRow?.rate ?? 0;
+    const market = marketRow?.effectiveRate ?? marketRow?.rate ?? 0;
+    if (bcv > 0 && market > 0) {
+      const pct = (((market - bcv) / bcv) * 100).toFixed(1).replace(".", ",");
+      const label = `+${pct}%`;
+      badges.forEach((el) => {
+        el.textContent = label;
+      });
+    }
+  } catch {
+    // Keep default badge text on network error
+  }
+}
+
+function syncActiveNavLinks() {
+  const currentPath = window.location.pathname.replace(/\/$/, "") || "/";
+  document
+    .querySelectorAll<HTMLAnchorElement>(".nav-link, .mobile-nav-link")
+    .forEach((link) => {
+      const href = (link.getAttribute("href") ?? "/").replace(/\/$/, "") || "/";
+      const isActive = href === currentPath;
+      link.classList.toggle("is-active", isActive);
+      if (isActive) {
+        link.setAttribute("aria-current", "page");
+      } else {
+        link.removeAttribute("aria-current");
+      }
+    });
+}
+
+initNavBrechaBadge();
+syncActiveNavLinks();
+document.addEventListener("astro:page-load", () => {
+  initNavBrechaBadge();
+  syncActiveNavLinks();
+});

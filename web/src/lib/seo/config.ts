@@ -1,5 +1,7 @@
 export type RouteKey =
   | "home"
+  | "comparador"
+  | "brecha"
   | "dolar-bcv"
   | "euro-bcv"
   | "usdt-binance"
@@ -21,11 +23,12 @@ export const SITE_NAME = "Cambio rápido";
 export const DEFAULT_SITE_URL = "https://cambiorapido.app";
 
 export const NAV_ROUTES: Array<{ key: PublicRouteConfig["key"]; path: string; label: string }> = [
-  { key: "home", path: "/", label: "Calculadora" },
+  { key: "home", path: "/", label: "Conversor" },
+  { key: "comparador", path: "/comparador", label: "Comparador" },
+  { key: "brecha", path: "/brecha", label: "Brecha cambiaria" },
   { key: "dolar-bcv", path: "/dolar-bcv", label: "Dólar BCV" },
   { key: "euro-bcv", path: "/euro-bcv", label: "Euro BCV" },
   { key: "usdt-binance", path: "/usdt-binance", label: "USDT Binance" },
-  { key: "brecha-cambiaria", path: "/brecha-cambiaria", label: "Brecha" },
   { key: "tendencias", path: "/tendencias", label: "Tendencias" },
 ];
 

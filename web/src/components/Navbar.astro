@@ -10,6 +10,7 @@ import Menu from "./icons/Menu.astro";
 import Moon from "./icons/Moon.astro";
 import Sun from "./icons/Sun.astro";
 import TrendingUp from "./icons/TrendingUp.astro";
+import TrendingUpDown from "./icons/TrendingUpDown.astro";
 import XIcon from "./icons/XIcon.astro";
 
 interface Props {
@@ -20,6 +21,8 @@ const { activeRoute } = Astro.props;
 
 const navIcons: Partial<Record<RouteKey, typeof CalculatorIcon>> = {
   home: CalculatorIcon,
+  comparador: TrendingUpDown,
+  brecha: TrendingUp,
   "dolar-bcv": DollarSign,
   "euro-bcv": EuroSign,
   "usdt-binance": Coins,
@@ -28,17 +31,19 @@ const navIcons: Partial<Record<RouteKey, typeof CalculatorIcon>> = {
 };
 ---
 
-<header class="site-header">
+<header class="site-header" transition:persist>
   <div class="header-inner">
-    <a href="/" class="brand-link">
-      <BrandLogo boxed={false} size="md" />
+    <a href="/" class="brand-link header-brand-link">
+      <BrandLogo boxed={true} size="md" />
       <span class="brand-name">{SITE_NAME}</span>
     </a>
 
     <nav aria-label="Principal" class="desktop-nav">
       <ul class="nav-list">
         {
-          NAV_ROUTES.map((item) => {
+          NAV_ROUTES.filter((item) =>
+            ["home", "comparador", "brecha"].includes(item.key),
+          ).map((item) => {
             const isActive = item.key === activeRoute;
             return (
               <li>
@@ -47,7 +52,15 @@ const navIcons: Partial<Record<RouteKey, typeof CalculatorIcon>> = {
                   aria-current={isActive ? "page" : undefined}
                   class:list={["nav-link", { "is-active": isActive }]}
                 >
-                  {item.label}
+                  <span>{item.label}</span>
+                  {item.key === "brecha" && (
+                    <span
+                      data-nav-brecha-badge
+                      class="ml-1.5 rounded-full bg-[var(--cr-primary-tonal)] px-2 py-0.5 text-[11px] font-bold tabular-nums text-[var(--cr-primary-ink)] whitespace-nowrap"
+                    >
+                      +0,0%
+                    </span>
+                  )}
                 </a>
               </li>
             );
@@ -131,6 +144,14 @@ const navIcons: Partial<Record<RouteKey, typeof CalculatorIcon>> = {
                       <NavIcon size={18} />
                     </span>
                     <span class="mobile-nav-label">{item.label}</span>
+                    {item.key === "brecha" && (
+                      <span
+                        data-nav-brecha-badge
+                        class="ml-auto rounded-full bg-[var(--cr-primary-tonal)] px-2.5 py-0.5 text-[11px] font-bold tabular-nums text-[var(--cr-primary-ink)] whitespace-nowrap"
+                      >
+                        +0,0%
+                      </span>
+                    )}
                   </a>
                 </li>
               );
@@ -229,12 +250,25 @@ const navIcons: Partial<Record<RouteKey, typeof CalculatorIcon>> = {
     flex-shrink: 0;
   }
 
+  .header-brand-link {
+    display: none;
+  }
+
   .mobile-menu-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     min-inline-size: 44px;
     min-block-size: 44px;
+    background: transparent;
+    border: none;
+    border-radius: 12px;
+    color: var(--cr-text);
+    cursor: pointer;
+    flex-shrink: 0;
+    margin-inline-start: auto;
+    transition: background-color 150ms ease, transform 150ms ease;
+  }
     padding: 0;
     border: 0;
     border-radius: 0.75rem;
@@ -255,6 +289,10 @@ const navIcons: Partial<Record<RouteKey, typeof CalculatorIcon>> = {
   }
 
   @media (min-width: 54rem) {
+    .header-brand-link {
+      display: none;
+    }
+
     .desktop-nav {
       display: flex;
       flex: 1 1 auto;
@@ -262,7 +300,7 @@ const navIcons: Partial<Record<RouteKey, typeof CalculatorIcon>> = {
     }
 
     .navbar-theme-switch {
-      display: inline-flex;
+      display: none;
     }
 
     .mobile-menu-btn {

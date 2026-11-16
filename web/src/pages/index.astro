@@ -49,28 +49,8 @@ const brechaPct =
     : null;
 ---
 
-<BaseLayout meta={meta} schemas={schemas} hideHeader={true}>
+<BaseLayout meta={meta} schemas={schemas}>
   <section class="hero-stage" aria-label="Calculadora principal">
-    <button
-      type="button"
-      data-theme-toggle
-      aria-pressed="false"
-      aria-label="Cambiar a modo oscuro"
-      class="cr-theme-switch floating-theme-toggle"
-    >
-      <span class="cr-theme-switch-label">Modo oscuro</span>
-      <span class="cr-theme-switch-track" aria-hidden="true">
-        <span class="cr-theme-switch-thumb">
-          <span class="theme-toggle-to-dark">
-            <Sun size={13} />
-          </span>
-          <span class="theme-toggle-to-light">
-            <Moon size={13} />
-          </span>
-        </span>
-      </span>
-    </button>
-
     <div class="hero-center">
       <CalculatorCard
         rates={snapshot.rates}
@@ -257,7 +237,7 @@ const brechaPct =
 <style>
   .hero-stage {
     position: relative;
-    min-height: 100dvh;
+    min-height: calc(100dvh - 4rem);
     width: 100%;
     display: flex;
     flex-direction: column;
@@ -270,7 +250,6 @@ const brechaPct =
 
   .hero-center {
     width: 100%;
-    margin-block: auto;
     display: flex;
     flex-direction: column;
     align-items: center;

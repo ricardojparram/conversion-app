@@ -38,6 +38,8 @@ export interface StructuredDataParams {
 
 const ROUTE_RATE_FILTER: Record<RouteKey, number[]> = {
   home: [1, 2, 3, 4],
+  comparador: [1, 3],
+  brecha: [1, 3],
   "dolar-bcv": [1],
   "euro-bcv": [2],
   "usdt-binance": [3, 4],
