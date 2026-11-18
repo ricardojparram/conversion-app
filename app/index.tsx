@@ -271,6 +271,16 @@ function HomeScreen() {
     setForeign(0);
   }, []);
 
+  const handleSelectSource = useCallback(
+    (currencyId: number) => {
+      const topField: "bs" | "foreign" = isSwapped ? "bs" : "foreign";
+      setLastEdited(topField);
+      calcSnapshotRef.current.lastEdited = topField;
+      setSelectedCurrencyId(currencyId);
+    },
+    [isSwapped],
+  );
+
   const handleSwap = useCallback(() => {
     const nextSwapped = !isSwapped;
     setIsSwapped(nextSwapped);
@@ -547,7 +557,7 @@ function HomeScreen() {
             <ConvertionDisplay
               convertions={convertions}
               selectedId={selectedCurrencyId}
-              onSelectSource={setSelectedCurrencyId}
+              onSelectSource={handleSelectSource}
               onRefresh={onRefresh}
               refreshing={refreshing}
               compact={isCompact}
